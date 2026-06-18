@@ -1,0 +1,16 @@
+name: boundary-guard
+
+# Enforce the open/closed boundary on every push and PR: no closed-engine
+# source, internal infra, credentials, internal docs, or non-whitelisted skills.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run public-repo boundary guard
+        run: sh scripts/public-repo-guard.sh
