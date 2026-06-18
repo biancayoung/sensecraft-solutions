@@ -11,8 +11,11 @@ if git ls-files | grep -E '^(provisioning_station|src-tauri|frontend)/' >/dev/nu
 fi
 
 # 2. No imports of the closed engine (incl. inside packages).
-if grep -rE 'import[[:space:]]+provisioning_station|from[[:space:]]+provisioning_station' --include='*.py' . >/dev/null; then
-  fail "provisioning_station import found"
+#    Anchor at line start (optionally indented) so real `import`/`from` statements
+#    are caught, but string literals that merely mention the name (e.g. a test
+#    asserting the engine is NOT imported) are not false-positives.
+if grep -rnE '^[[:space:]]*(import|from)[[:space:]]+provisioning_station' --include='*.py' . >/dev/null; then
+  fail "provisioning_station import statement found"
 fi
 
 # 3. No internal infra hostnames / credential markers.

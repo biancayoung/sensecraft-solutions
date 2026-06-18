@@ -1,7 +1,7 @@
-name: boundary-guard
+name: ci
 
-# Enforce the open/closed boundary on every push and PR: no closed-engine
-# source, internal infra, credentials, internal docs, or non-whitelisted skills.
+# Enforce the open/closed boundary AND validate every solution against the
+# published contract, on every push and PR.
 on:
   push:
     branches: [main]
@@ -14,3 +14,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run public-repo boundary guard
         run: sh scripts/public-repo-guard.sh
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Validate all solutions against the contract
+        run: |
+          uv sync
+          rc=0
+          for s in solutions/*/; do
+            id=$(basename "$s")
+            # ai_lab is a legacy solution (pre-flat layout, no type= steps);
+            # tracked for migration. solutionctl validate auto-skips non-solution
+            # dirs (e.g. _shared) that have no solution.yaml.
+            if [ "$id" = "ai_lab" ]; then echo "skip (legacy): $id"; continue; fi
+            uv run --package solutionctl solutionctl validate "$s" --spec-dir spec || rc=1
+          done
+          exit $rc

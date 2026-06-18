@@ -48,6 +48,12 @@ def _cmd_manage(args: argparse.Namespace) -> int:
     return manage.run(args.subcommand)
 
 
+def _cmd_validate(args: argparse.Namespace) -> int:
+    from .commands import validate
+
+    return validate.run(solution_path=args.solution_path, spec_dir=args.spec_dir)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="solutionctl",
@@ -70,6 +76,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_manage = sub.add_parser("manage", help="Drive headless device-management REST")
     p_manage.add_argument("subcommand", help="e.g. list-apps")
     p_manage.set_defaults(func=_cmd_manage)
+
+    p_validate = sub.add_parser(
+        "validate",
+        help="Offline-validate a solution against the spec/ contract (zero engine)",
+    )
+    p_validate.add_argument("solution_path", help="Path to the solution directory")
+    p_validate.add_argument(
+        "--spec-dir",
+        default=None,
+        dest="spec_dir",
+        help="Path to the spec/ directory (auto-discovered if omitted)",
+    )
+    p_validate.set_defaults(func=_cmd_validate)
 
     return parser
 

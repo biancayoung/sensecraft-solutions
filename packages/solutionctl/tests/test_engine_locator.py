@@ -8,7 +8,6 @@ import stat
 from pathlib import Path
 
 import pytest
-
 from solutionctl import engine_locator as el
 from solutionctl.engine_locator import EngineNotFoundError, locate_engine
 
