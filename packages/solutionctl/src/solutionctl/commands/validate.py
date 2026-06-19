@@ -47,27 +47,9 @@ from pathlib import Path
 # --- Parser-based check constants (mirror tests/unit/test_solution_format.py
 #     and tests/unit/test_solution_spec_compliance.py from the private repo) ---
 
-# Step types whose deployer ``category == "verify"`` in the engine registry.
-# The engine isn't importable here, so the set is mirrored statically. Keep in
-# sync with the private deployer registry (deployers/*_deployer.py).
-_VERIFY_STEP_TYPES: frozenset[str] = frozenset(
-    {
-        "web_dashboard",
-        "image_predict",
-        "image_text_chat",
-        "text_chat",
-        "image_text_to_image",
-        "voice_chat",
-        "voice_demo",
-        "video_stream",
-        "preview",
-        "serial_camera",
-        "serial_wizard",
-        "robot_inspect",
-        "http_debug",
-        "verify",
-    }
-)
+# Verify step types are derived at runtime from ``capabilities.json`` —
+# the deployers whose ``category == "verify"`` (see run()). No static list to
+# drift out of sync with the engine registry.
 
 # Presets grandfathered out of the "≥1 verify step" rule — hardware-only or
 # cloud-only solutions with no local web dashboard to point a verify step at.
@@ -142,11 +124,12 @@ def _target_name_text(raw_name, lang: str) -> str:
 
 
 def _check_verify_and_target_naming(
-    result, sol_id: str, fname: str, lang: str
+    result, sol_id: str, fname: str, lang: str, verify_types: frozenset[str]
 ) -> list[str]:
     """Verify-step presence per preset + non-direction-word target names.
 
-    ``result`` is a single-language ``ParseResult``.
+    ``result`` is a single-language ``ParseResult``. ``verify_types`` is the
+    set of deployer types whose ``category == "verify"`` (from capabilities.json).
     """
     errors: list[str] = []
     for preset in result.presets:
@@ -155,7 +138,7 @@ def _check_verify_and_target_naming(
         verify_count = sum(
             1
             for s in preset.steps
-            if s.type in _VERIFY_STEP_TYPES or getattr(s, "verify_override", False)
+            if s.type in verify_types or getattr(s, "verify_override", False)
         )
         if verify_count == 0 and key not in _LEGACY_NO_VERIFY:
             errors.append(
@@ -295,7 +278,12 @@ def run(solution_path: str, spec_dir: str | None = None) -> int:
         from sensecraft_solution_spec import markdown_parser as mp
 
         caps = json.loads(caps_path.read_text(encoding="utf-8"))
-        deployer_keys = set(caps.get("deployers", {}).keys())
+        deployers_info = caps.get("deployers", {})
+        deployer_keys = set(deployers_info.keys())
+        # Verify step types = deployers with category == "verify" (no drift).
+        verify_types = frozenset(
+            t for t, info in deployers_info.items() if info.get("category") == "verify"
+        )
         # Seed the parser's valid step-type set from the contract (engine-free).
         mp.register_step_type_provider(lambda: deployer_keys)
 
@@ -321,7 +309,11 @@ def run(solution_path: str, spec_dir: str | None = None) -> int:
                 errors.append(f"{fname}: {perr}")
             # --- 4. parser-based structure/format rules (engine-free) --------
             errors.extend(_check_orphan_h2(content, fname))
-            errors.extend(_check_verify_and_target_naming(result, sol_id, fname, lang))
+            errors.extend(
+                _check_verify_and_target_naming(
+                    result, sol_id, fname, lang, verify_types
+                )
+            )
         if not any_guide:
             errors.append("no guide.md (or guide_zh.md) found — cannot validate steps")
 

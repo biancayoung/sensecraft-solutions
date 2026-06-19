@@ -2,27 +2,32 @@
   "contract_version": 1,
   "deployers": {
     "docker_deploy": {
+      "category": "deploy",
       "required": []
     },
     "docker_local": {
+      "category": "deploy",
       "required": [
         "docker",
         "docker.compose_file"
       ]
     },
     "docker_remote": {
+      "category": "deploy",
       "required": [
         "docker_remote",
         "docker_remote.compose_file"
       ]
     },
     "esp32_usb": {
+      "category": "deploy",
       "required": [
         "firmware",
         "firmware.flash_config"
       ]
     },
     "ha_integration": {
+      "category": "deploy",
       "required": [
         "ha_integration",
         "ha_integration.domain",
@@ -30,6 +35,7 @@
       ]
     },
     "himax_usb": {
+      "category": "deploy",
       "required": [
         "firmware",
         "firmware.flash_config",
@@ -37,74 +43,93 @@
       ]
     },
     "http_debug": {
+      "category": "verify",
       "required": []
     },
     "image_predict": {
+      "category": "verify",
       "required": []
     },
     "image_text_chat": {
+      "category": "verify",
       "required": []
     },
     "image_text_to_image": {
+      "category": "verify",
       "required": []
     },
     "manual": {
+      "category": "deploy",
       "required": [
         "steps[]"
       ]
     },
     "preview": {
+      "category": "verify",
       "required": []
     },
     "recamera_cpp": {
+      "category": "deploy",
       "required": [
         "binary"
       ]
     },
     "recamera_nodered": {
+      "category": "deploy",
       "required": [
         "nodered",
         "nodered.flow_file"
       ]
     },
     "robot_inspect": {
+      "category": "verify",
       "required": []
     },
     "script": {
+      "category": "deploy",
       "required": [
         "script"
       ]
     },
     "serial_camera": {
+      "category": "verify",
       "required": []
     },
     "serial_wizard": {
+      "category": "verify",
       "required": [
         "serial_wizard"
       ]
     },
     "ssh_deb": {
+      "category": "deploy",
       "required": [
         "ssh",
         "package"
       ]
     },
     "text_chat": {
+      "category": "verify",
       "required": []
     },
     "verify": {
+      "category": "verify",
       "required": []
     },
     "video_stream": {
+      "category": "verify",
       "required": []
     },
     "voice_chat": {
+      "category": "verify",
       "required": []
     },
     "voice_demo": {
+      "category": "verify",
       "required": []
     },
     "web_dashboard": {
+      "category": "verify",
       "required": []
     }
   }
