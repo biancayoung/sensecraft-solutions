@@ -16,16 +16,166 @@ Checks performed against ``<solution_path>``:
 3. ``guide.md`` (+ ``guide_zh.md`` if present) parsed with the valid step-type
    set seeded from ``capabilities.json`` deployer keys, surfacing parse errors
    and illegal ``type=`` values.
+4. Parser-based structure/format rules (engine-free), mirroring the private
+   ``tests/unit/test_solution_format.py`` so contributors can self-check
+   offline with the same verdict the maintainer CI applies:
+
+   * **EN/ZH structure parity** — ``validate_structure_consistency`` on the
+     two parsed guides (preset/step/target IDs must match).
+   * **Verify step per preset** — every preset must contain at least one
+     verify-category step (``web_dashboard`` / ``image_predict`` / ``text_chat``
+     / etc.) or a ``verify=true`` override. A small legacy allowlist matches
+     the private compliance test.
+   * **Orphan H2** — every ``##`` heading must be a canonical
+     ``## Preset:`` / ``## Step N:`` (EN) or ``## 套餐:`` / ``## 步骤 N:`` (ZH)
+     heading; any other top-level H2 is an error.
+   * **Target naming** — a markdown ``### Target`` name must not be a bare
+     direction word (Local / Remote / 本地 / 远程 / 本机 / 远端); the live UI
+     label is resolved from i18n, so a direction word is misleading.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
 # NOTE: jsonschema / yaml / sensecraft_solution_spec are declared deps. Engine
 # packages (provisioning_station) are intentionally NOT imported anywhere here.
+
+# --- Parser-based check constants (mirror tests/unit/test_solution_format.py
+#     and tests/unit/test_solution_spec_compliance.py from the private repo) ---
+
+# Step types whose deployer ``category == "verify"`` in the engine registry.
+# The engine isn't importable here, so the set is mirrored statically. Keep in
+# sync with the private deployer registry (deployers/*_deployer.py).
+_VERIFY_STEP_TYPES: frozenset[str] = frozenset(
+    {
+        "web_dashboard",
+        "image_predict",
+        "image_text_chat",
+        "text_chat",
+        "image_text_to_image",
+        "voice_chat",
+        "voice_demo",
+        "video_stream",
+        "preview",
+        "serial_camera",
+        "serial_wizard",
+        "robot_inspect",
+        "http_debug",
+        "verify",
+    }
+)
+
+# Presets grandfathered out of the "≥1 verify step" rule — hardware-only or
+# cloud-only solutions with no local web dashboard to point a verify step at.
+# Mirrors ``_LEGACY_NO_VERIFY`` in the private compliance test. Entries are
+# "solution_id/preset_id". Do NOT add new entries — new solutions must include
+# a verify step.
+_LEGACY_NO_VERIFY: frozenset[str] = frozenset(
+    {
+        "nvblox_orbbec/jetson_nvblox",
+        "openclaw_deploy/openclaw_basic",
+        "openclaw_deploy/openclaw_recomputer_r",
+        "reachy_claw_voice_robot/jetson",
+        "reachy_claw_voice_robot/r2000_hailo",
+        "reachy_claw_voice_robot/cm4",
+        "smart_retail_voice_ai/default",
+        "smart_space_assistant/display_cast",
+    }
+)
+
+# A markdown Target name must not be a bare direction word — the live UI label
+# is resolved from i18n.deploy.methodLabels based on ``type=`` + ``device_name=``,
+# so a direction word in the source is misleading. Mirrors
+# ``_FORBIDDEN_GENERIC_NAMES`` in the private compliance test.
+_FORBIDDEN_TARGET_NAMES: frozenset[str] = frozenset(
+    {"Local", "Remote", "local", "remote", "本地", "远程", "本机", "远端"}
+)
+
+# Strip fenced code blocks before scanning for orphan H2 so a literal
+# ``## ...`` inside a code example doesn't trip the lint.
+_FENCE_RE = re.compile(r"```[^\n]*\n.*?\n```", re.DOTALL)
+# Strict H2 (exactly two ``#``), capturing the heading text.
+_H2_RE = re.compile(r"(?m)^##(?!#)\s+(.+?)\s*$")
+# Canonical H2 forms: ``Preset:`` / ``套餐:`` / ``预设:`` (with {#id}) and
+# ``Step N:`` / ``步骤 N:`` (with {#id ...}). Matches test_solution_format.py.
+_CANONICAL_H2_RE = re.compile(
+    r"^(?:"
+    r"Preset:\s*.+\{#\w+\}|"
+    r"(?:套餐|预设)[：:]?\s*.+\{#\w+\}|"
+    r"Step\s+\d+[：:]\s*.+\{#\w+[^}]*\}|"
+    r"步骤\s*\d+[：:]\s*.+\{#\w+[^}]*\}"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
+
+def _check_orphan_h2(content: str, fname: str) -> list[str]:
+    """Return error strings for any non-canonical top-level H2 heading."""
+    errors: list[str] = []
+    stripped = _FENCE_RE.sub("", content)
+    for m in _H2_RE.finditer(stripped):
+        header = m.group(1).strip()
+        if not _CANONICAL_H2_RE.match(header):
+            errors.append(
+                f"{fname}: orphan H2 '## {header}' — every H2 must be "
+                f"'## Preset: <name> {{#id}}' / '## 套餐: <name> {{#id}}' or "
+                f"'## Step N: <title> {{#id ...}}' / '## 步骤 N: <title> {{#id ...}}'. "
+                f"Move appendix/intro content into a step subsection or description.md."
+            )
+    return errors
+
+
+def _target_name_text(raw_name, lang: str) -> str:
+    """Extract a plain target-name string from a str or ``Localized`` value."""
+    if isinstance(raw_name, str):
+        return raw_name.strip()
+    getter = getattr(raw_name, "get", None)
+    if callable(getter):
+        val = getter(lang)
+        if isinstance(val, str):
+            return val.strip()
+    return ""
+
+
+def _check_verify_and_target_naming(
+    result, sol_id: str, fname: str, lang: str
+) -> list[str]:
+    """Verify-step presence per preset + non-direction-word target names.
+
+    ``result`` is a single-language ``ParseResult``.
+    """
+    errors: list[str] = []
+    for preset in result.presets:
+        # Verify step presence.
+        key = f"{sol_id}/{preset.id}"
+        verify_count = sum(
+            1
+            for s in preset.steps
+            if s.type in _VERIFY_STEP_TYPES or getattr(s, "verify_override", False)
+        )
+        if verify_count == 0 and key not in _LEGACY_NO_VERIFY:
+            errors.append(
+                f"{fname}: preset '{preset.id}' has no verify step — every preset "
+                f"needs ≥1 verify-category step (e.g. type=web_dashboard / "
+                f"image_predict / text_chat / voice_chat) or a step marked "
+                f"verify=true, so the user can confirm the deployment worked."
+            )
+        # Target naming.
+        for step in preset.steps:
+            for target in step.targets or []:
+                text = _target_name_text(getattr(target, "name", None), lang)
+                if text and text in _FORBIDDEN_TARGET_NAMES:
+                    errors.append(
+                        f"{fname}: target '{target.id}' in step '{step.id}' uses a "
+                        f"bare direction word as its name ({text!r}). The live UI "
+                        f"label comes from i18n, so this is misleading — omit the "
+                        f"name or use a descriptive fallback like 'Deploy on Pi'."
+                    )
+    return errors
 
 
 def _find_spec_dir(solution_path: Path, explicit: str | None) -> Path | None:
@@ -78,6 +228,7 @@ def run(solution_path: str, spec_dir: str | None = None) -> int:
     if not sol_path.is_dir():
         print(f"Error: solution path not found: {sol_path}", file=sys.stderr)
         return 1
+    sol_id = sol_path.name
 
     spec = _find_spec_dir(sol_path, spec_dir)
     if spec is None:
@@ -157,21 +308,31 @@ def run(solution_path: str, spec_dir: str | None = None) -> int:
         zh_rel = guide_rel[:-3] + "_zh.md" if guide_rel.endswith(".md") else guide_rel + "_zh.md"
         guide_files = [(guide_rel, "en"), (zh_rel, "zh")]
         any_guide = False
+        parsed: dict[str, object] = {}
         for fname, lang in guide_files:
             gpath = sol_path / fname
             if not gpath.is_file():
                 continue
             any_guide = True
-            result = mp.parse_single_language_guide(
-                gpath.read_text(encoding="utf-8"), lang
-            )
+            content = gpath.read_text(encoding="utf-8")
+            result = mp.parse_single_language_guide(content, lang)
+            parsed[lang] = result
             for perr in result.errors:
                 errors.append(f"{fname}: {perr}")
+            # --- 4. parser-based structure/format rules (engine-free) --------
+            errors.extend(_check_orphan_h2(content, fname))
+            errors.extend(_check_verify_and_target_naming(result, sol_id, fname, lang))
         if not any_guide:
             errors.append("no guide.md (or guide_zh.md) found — cannot validate steps")
 
+        # --- 4b. EN/ZH structure parity (only when both guides exist) --------
+        if "en" in parsed and "zh" in parsed:
+            consistency = mp.validate_structure_consistency(parsed["en"], parsed["zh"])
+            if not consistency.valid:
+                for cerr in consistency.errors:
+                    errors.append(f"EN/ZH structure mismatch: {cerr}")
+
     # --- report --------------------------------------------------------------
-    sol_id = sol_path.name
     if errors:
         print(f"✗ {sol_id} invalid ({len(errors)} error(s)):", file=sys.stderr)
         for e in errors:

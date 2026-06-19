@@ -120,3 +120,105 @@ def test_no_provisioning_station_import():
     src = Path(validate.__file__).read_text(encoding="utf-8")
     assert "import provisioning_station" not in src
     assert "from provisioning_station" not in src
+
+
+# ---------------------------------------------------------------------------
+# Parser-based structure/format checks (mirror tests/unit/test_solution_format.py)
+# ---------------------------------------------------------------------------
+
+
+def _write_solution(base: Path, guide_en: str, guide_zh: str | None = None) -> None:
+    """Write a schema-valid solution skeleton with the given guide content(s)."""
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "solution.yaml").write_text(
+        'version: "1.0"\n'
+        f"id: {base.name}\n"
+        "name: Test Solution\n"
+        "intro:\n"
+        "  summary: A test solution.\n"
+        "  description_file: description.md\n"
+        "deployment:\n"
+        "  guide_file: guide.md\n",
+        encoding="utf-8",
+    )
+    (base / "guide.md").write_text(guide_en, encoding="utf-8")
+    if guide_zh is not None:
+        (base / "guide_zh.md").write_text(guide_zh, encoding="utf-8")
+
+
+def test_validate_missing_verify_step_fails(tmp_path, capsys):
+    """A preset with no verify-category step fails with exit 1."""
+    base = tmp_path / "no_verify"
+    # Single docker_deploy step, no verify step in the preset.
+    _write_solution(
+        base,
+        "## Preset: Demo {#default}\n\n"
+        "## Step 1: Deploy {#deploy type=docker_deploy required=true}\n\n"
+        "Deploy the stack.\n\n"
+        "### Target {#local type=local config=devices/x.yaml default=true}\n\n"
+        "Run here.\n",
+    )
+    rc = validate.run(str(base), spec_dir=str(SPEC_DIR))
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "no verify step" in err
+    assert "default" in err
+
+
+def test_validate_orphan_h2_fails(tmp_path, capsys):
+    """A non-canonical top-level H2 fails with exit 1."""
+    base = tmp_path / "orphan_h2"
+    _write_solution(
+        base,
+        "## Preset: Demo {#default}\n\n"
+        "## Step 1: Verify {#check type=web_dashboard required=true config=devices/x.yaml}\n\n"
+        "Open the dashboard.\n\n"
+        "## Quick Verification\n\n"
+        "This appendix H2 is an orphan.\n",
+    )
+    rc = validate.run(str(base), spec_dir=str(SPEC_DIR))
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "orphan H2" in err
+    assert "Quick Verification" in err
+
+
+def test_validate_direction_word_target_name_fails(tmp_path, capsys):
+    """A Target named with a bare direction word fails with exit 1."""
+    base = tmp_path / "dir_target"
+    _write_solution(
+        base,
+        "## Preset: Demo {#default}\n\n"
+        "## Step 1: Verify {#check type=web_dashboard required=true}\n\n"
+        "Open it.\n\n"
+        "## Step 2: Deploy {#deploy type=docker_deploy required=true}\n\n"
+        "Deploy.\n\n"
+        "### Target: Local {#local type=local config=devices/x.yaml default=true}\n\n"
+        "Run here.\n",
+    )
+    rc = validate.run(str(base), spec_dir=str(SPEC_DIR))
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "bare direction word" in err
+    assert "'Local'" in err
+
+
+def test_validate_en_zh_mismatch_fails(tmp_path, capsys):
+    """EN and ZH guides with mismatched structure fail with exit 1."""
+    base = tmp_path / "en_zh_mismatch"
+    en = (
+        "## Preset: Demo {#default}\n\n"
+        "## Step 1: Verify {#check type=web_dashboard required=true config=devices/x.yaml}\n\n"
+        "Open the dashboard.\n"
+    )
+    # ZH guide has a different step id (#different vs #check) → structure mismatch.
+    zh = (
+        "## 套餐: 演示 {#default}\n\n"
+        "## 步骤 1: 验证 {#different type=web_dashboard required=true config=devices/x.yaml}\n\n"
+        "打开仪表盘。\n"
+    )
+    _write_solution(base, en, zh)
+    rc = validate.run(str(base), spec_dir=str(SPEC_DIR))
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "EN/ZH structure mismatch" in err

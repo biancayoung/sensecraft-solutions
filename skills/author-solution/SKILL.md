@@ -245,13 +245,34 @@ Your service is now running.
 
 ## Phase 4: 校验
 
-**Step 12**：用离线工具 `solutionctl` 校验方案符合公开契约：
+**Step 12**：用离线工具 `solutionctl` 校验方案符合公开契约。
+
+在本仓库内（推荐，自动使用 workspace 里的 spec/ 和解析器）：
 
 ```bash
 uv run --package sensecraft-solutionctl solutionctl validate solutions/<solution_id> --spec-dir spec
 ```
 
-`solutionctl validate` 离线检查：solution.yaml / device YAML 是否符合 `spec/*.json` schema、guide.md Step/Target 语法、每个 preset 是否有 verify step、孤儿 H2、target 命名等。**必须全绿**才算合格。
+也可以**独立安装**（包已发布到 PyPI），在任意位置校验，只需指向本仓库的 `spec/` 目录：
+
+```bash
+# 方式 A：装到环境里
+pip install sensecraft-solutionctl
+solutionctl validate <solution_path> --spec-dir <repo>/spec
+
+# 方式 B：免安装，一次性运行
+uvx sensecraft-solutionctl validate <solution_path> --spec-dir <repo>/spec
+```
+
+`solutionctl validate` **完全离线**（零引擎依赖），检查：
+- **solution.yaml / device YAML** 是否符合 `spec/*.json` schema；
+- **guide.md / guide_zh.md** Step/Target 语法与 `type=` 是否为合法 deployer 类型（来自 `spec/capabilities.json`）；
+- **每个 preset 至少 1 个 verify step**（`web_dashboard` / `image_predict` / `text_chat` / `voice_chat` / `http_debug` 等，或 `verify=true` 标记的步骤）；
+- **孤儿 H2**：每个 `##` 必须是 `## Preset:` / `## 套餐:` 或 `## Step N:` / `## 步骤 N:`，其它顶层 H2 报错；
+- **target 命名**：`### Target` 名不得是方向词（Local / Remote / 本地 / 远程 / 本机 / 远端）；
+- **中英文结构一致**：guide.md 与 guide_zh.md 的 preset / step / target ID 必须一一对应。
+
+**必须全绿**才算合格。
 
 失败 → 修复循环（修改 device YAML / compose / flow.json / guide.md，**不改应用源码**），重跑直到通过。
 
