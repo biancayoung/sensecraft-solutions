@@ -10,7 +10,7 @@ detection:
 
 firmware:
   source:
-    path: assets/firmware/firmware.bin
+    path: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/firmware.bin
   flash_config:
     chip: auto
     baud_rate: 921600
@@ -19,13 +19,13 @@ firmware:
     partitions:
       - name: bootloader
         offset: "0x0"
-        file: esp32s3/lekiwi_motor_control.ino.bootloader.bin
+        file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/lekiwi_motor_control.ino.bootloader.bin
       - name: partitions
         offset: "0x8000"
-        file: esp32s3/lekiwi_motor_control.ino.partitions.bin
+        file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/lekiwi_motor_control.ino.partitions.bin
       - name: app
         offset: "0x10000"
-        file: esp32s3/servo_id_setter.ino.bin
+        file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/servo_id_setter.ino.bin
   variants:
     esp32s3:
       flash_config:
@@ -33,13 +33,13 @@ firmware:
       partitions:
         - name: bootloader
           offset: "0x0"
-          file: assets/firmware/esp32s3/lekiwi_motor_control.ino.bootloader.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/lekiwi_motor_control.ino.bootloader.bin
         - name: partitions
           offset: "0x8000"
-          file: assets/firmware/esp32s3/lekiwi_motor_control.ino.partitions.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/lekiwi_motor_control.ino.partitions.bin
         - name: app
           offset: "0x10000"
-          file: assets/firmware/esp32s3/servo_id_setter.ino.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32s3/servo_id_setter.ino.bin
     esp32c6:
       flash_config:
         chip: esp32c6
@@ -47,13 +47,13 @@ firmware:
       partitions:
         - name: bootloader
           offset: "0x0"
-          file: assets/firmware/esp32c6/lekiwi_motor_control.ino.bootloader.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32c6/lekiwi_motor_control.ino.bootloader.bin
         - name: partitions
           offset: "0x8000"
-          file: assets/firmware/esp32c6/lekiwi_motor_control.ino.partitions.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32c6/lekiwi_motor_control.ino.partitions.bin
         - name: app
           offset: "0x10000"
-          file: assets/firmware/esp32c6/servo_id_setter.ino.bin
+          file: https://sensecraft-statics.seeed.cc/solution-app/voice_robot_lekiwi/assets/firmware/esp32c6/servo_id_setter.ino.bin
 
 post_deployment:
   reset_device: true
