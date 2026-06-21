@@ -12,6 +12,11 @@ detection:
     - docker
 
 docker:
+  # Opt in to the CI docker-compose smoke (scripts/ci/docker_smoke.py): bring
+  # the stack up on an x86 CI runner and assert each declared service's health
+  # endpoint responds. Only lightweight x86 stacks should set this — GPU/Jetson
+  # or hardware-flash presets cannot come up in a generic CI runner.
+  ci_smoke: true
   compose_file: ../docker/docker-compose.yml
   environment:
     DOCKER_INFLUXDB_INIT_USERNAME: admin

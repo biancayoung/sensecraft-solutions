@@ -1,0 +1,54 @@
+name: solution-smoke
+
+# Deploy-can-start gate: for every solution whose docker_deploy preset opts in
+# with `docker.ci_smoke: true`, bring the compose stack up on the runner's
+# Docker and assert each declared service's health endpoint responds. This
+# proves the solution *can deploy* — it does NOT verify output correctness
+# (that is unverifiable by automation; see the verification-level discussion).
+#
+# Only lightweight x86 stacks should opt in. GPU/Jetson and hardware-flash
+# presets cannot come up in a generic CI runner and must stay unmarked.
+
+on:
+  pull_request:
+    paths:
+      - 'solutions/**'
+      - 'scripts/ci/**'
+      - '.github/workflows/smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'solutions/**'
+      - 'scripts/ci/**'
+      - '.github/workflows/smoke.yml'
+
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest  # ships with Docker Engine + docker compose v2
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install harness deps
+        run: pip install pyyaml
+
+      - name: Smoke every ci_smoke-marked solution
+        run: |
+          set -euo pipefail
+          dirs=$(grep -rl 'ci_smoke: true' solutions/*/devices/*.yaml 2>/dev/null \
+                   | xargs -r -n1 dirname | xargs -r -n1 dirname | sort -u)
+          if [ -z "${dirs}" ]; then
+            echo "No solutions opt in to docker.ci_smoke — nothing to smoke."
+            exit 0
+          fi
+          rc=0
+          for d in ${dirs}; do
+            echo "::group::docker smoke ${d}"
+            python3 scripts/ci/docker_smoke.py "${d}" || rc=1
+            echo "::endgroup::"
+          done
+          exit ${rc}
