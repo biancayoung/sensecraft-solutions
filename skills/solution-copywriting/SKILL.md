@@ -1,5 +1,5 @@
 ---
-name: optimize-solution
+name: solution-copywriting
 description: 优化 IoT 解决方案文案。检查并改进 solutions/ 目录下的介绍页和部署页文案，确保非技术用户能理解。使用场景：优化文案、检查术语、修复文案问题。
 argument-hint: "<solution_id> [修改方向]"
 allowed-tools: Read, Write, Edit, Glob, Grep
@@ -10,10 +10,10 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 ## 调用方式
 
 ```
-/optimize-solution smart_warehouse                    # 全面检查
-/optimize-solution smart_warehouse 介绍页术语太专业    # 指定修改方向
-/optimize-solution smart_warehouse 部署步骤不清晰
-/optimize-solution smart_warehouse 添加故障排查表格
+/solution-copywriting smart_warehouse                    # 全面检查
+/solution-copywriting smart_warehouse 介绍页术语太专业    # 指定修改方向
+/solution-copywriting smart_warehouse 部署步骤不清晰
+/solution-copywriting smart_warehouse 添加故障排查表格
 ```
 
 ## 参数说明
@@ -59,7 +59,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep
 - [ ] 每个步骤有 `### 接线` / `### Wiring` 子节？
 - [ ] 每个步骤有 `### 故障排查` / `### Troubleshooting` 子节？
 - [ ] 中英文步骤 ID（`{#...}` 部分）完全一致？
-- [ ] **中文关键词严格使用规范写法**？（`### 部署目标:` 不是 `### 目标:`，`### 故障排查` 不是 `### 排错`——完整对照表见 `docs/guide-heading-keywords.md`）
+- [ ] **中文关键词严格使用规范写法**？（`### 部署目标:` 不是 `### 目标:`，`### 故障排查` 不是 `### 排错`——完整对照表见下方「子节识别规则」表）
 - [ ] 成功页内容完整？
 - [ ] **尖括号占位符已正确处理**？裸文本中 `<device-ip>` → `\<device-ip\>`；backtick 内和 fenced code block 内**不要转义**（反斜杠会原样显示）
 

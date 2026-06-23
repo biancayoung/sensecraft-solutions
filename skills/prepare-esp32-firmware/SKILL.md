@@ -180,6 +180,15 @@ Flash the firmware to SenseCAP Watcher device.
 
 ## Manual Test
 
+`esptool.py` is an external tool (not bundled). Install it standalone:
+
+```bash
+uv tool install esptool     # recommended (isolated CLI)
+# or: pip install esptool
+```
+
+Then flash manually (this is only for bring-up — at deploy time the engine binary handles flashing):
+
 ```bash
 esptool.py --port /dev/ttyUSB0 --chip esp32s3 \
   --baud 921600 write_flash \

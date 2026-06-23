@@ -35,9 +35,11 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 - 极少数纯硬件/纯云方案没有本地 dashboard 可指 → 在该 preset 上标 `verify_exempt: true` 豁免（CI 会接受）。
 
 **校验现在查得更全**：`solutionctl validate --check-urls` 会查 schema、引用文件存在、i18n 完整、重复 id、device-ref、**死链（4xx）**、compose/flow 可解析、EN/ZH 结构一致。本地提交前自己跑一遍即可和 CI 一致。
+> ⚠️ `--check-urls` 对图片/封面 URL 也会发请求。**`files.seeedstudio.com` 会被 Cloudflare 拦返回 403 → 校验失败**，别拿它当图片源（详见 Step 11 的图片源警告）。
 
 **诚实标注验证等级（可选但推荐）**：在 preset 上加 `verified:` 列表对用户透明——
 - `deploy-smoke`：声明它能在 CI 里起得来。**前提**：该 preset 有一个 `type: docker_deploy` 的 device YAML 在 `docker:` 块里标了 `ci_smoke: true`（仅限轻量 x86 栈；GPU/Jetson/烧固件的别标，CI 起不来）。validate 会强制这个一致性，标了 deploy-smoke 却没 ci_smoke gate 会报错。
+  > **注意**：`ci_smoke` 是校验器直接从 raw YAML 读取的键，**不在** Pydantic `DockerConfig` schema 里——照写就行，别因为 schema 里没有它就以为是多余字段而删掉。
 - `hardware`：你（或维护者）在真设备上跑过。
 - 结果对不对（模型准不准等）永远不自动验证，靠人。
 
@@ -212,7 +214,23 @@ One-line description.
 
 > **多个 docker_deploy 步部署到同一台机器** —— 用 `target_inherit_from=<upstream_step_id>` 让下游步自动跟随上游的 local/remote 选择。只继承 method（local/remote），不绑死 target id。同一 preset 内才能继承；引用的 step 必须在自己之前、且自己有 targets。
 
-> **verify 步要复用上游 deploy 的 host** —— 在 verify 步的 device YAML 里写 `inherit_host_from: <step_id>` 显式声明（`inherit_host_from` 是 device schema 顶层字段，见 CONTRACT）。端点模板用 `{{deploy.host}}`。多 deploy 步的方案必须显式写，自动 fallback 会选错。
+> **verify 步要复用上游 deploy 的 host** —— 在 verify 步的 device YAML 里写 `inherit_host_from: <step_id>` 显式声明（`inherit_host_from` 是 device schema 顶层字段，见 CONTRACT）。
+>
+> **`<step_id>` 是上游那个 deploy `## Step` 的 id（guide.md 里 `{#...}` 的值），不是 device id、也不是 target id。** 端点模板用 `{{deploy.host}}`，引擎会替换成被继承步骤实际选定的 host。多 deploy 步的方案必须显式写，自动 fallback（"最近的 deploy 步"）会选错。
+>
+> 最小 `web_dashboard` verify device YAML：
+>
+> ```yaml
+> version: "1.0"
+> id: dashboard
+> name: Open Dashboard
+> type: web_dashboard
+> inherit_host_from: web        # ← 上游 deploy 步的 STEP id（## Step {#web ...}）
+> web_dashboard:
+>   url: "http://{{deploy.host}}:8080"   # {{deploy.host}} = 继承到的 host
+>   title: My Dashboard
+>   description: 页面能加载出数据即代表部署成功。
+> ```
 
 > **`### Wiring` 段严格限定为接线说明**，不要塞 Docker 安装、API key 获取等非接线内容。
 
@@ -245,7 +263,98 @@ Your service is now running.
 - technical 类需声明输出接口（含路由标识 port/endpoint/topic/path/url）
 - 需要外部输入的方案声明输入要求
 - `device_ref` 必须能在 `intro.device_catalog` 中找到
-- 设备图片用稳定 CDN 域名
+- 设备/封面图片用能通过 `--check-urls` 的稳定源（见下方 ⚠️ 图片源警告）
+
+> ⚠️ **图片源警告**：**不要用 `files.seeedstudio.com` 作为图片/封面的 URL** —— 它被 Cloudflare 拦，`solutionctl validate --check-urls` 会拿到 **403**，过不了 skill 自己的 URL 检查。改用能返回 200 的源：方案自带的本地图（`gallery/cover.png`、`assets/...`，用相对路径）或确定可达的公共 CDN（如 `media-cdn.seeedstudio.com`、`sensecraft-statics.seeed.cc`）。
+
+#### 最小可复制的 `solution.yaml` 骨架（solution 类型）
+
+下面是一个**经 `solutionctl validate` 通过**的最小骨架（一个 `docker_deploy` 部署步 + 一个 `web_dashboard` verify 步）。复制后改 id/name/镜像即可。完整字段含义查 `spec/CONTRACT.md`。
+
+```yaml
+version: "1.0"
+id: hello_dashboard
+name: Hello Dashboard
+name_i18n:
+  zh: 你好看板
+
+intro:
+  summary: A minimal one-click web dashboard you can deploy and open.
+  summary_i18n:
+    zh: 一个可一键部署并打开的最小 Web 看板。
+  description_file: description.md
+  description_file_i18n:
+    zh: description_zh.md
+  cover_image: gallery/cover.png        # 本地相对路径，别用 files.seeedstudio.com
+  category: sensing
+  solution_type: solution               # solution | technical
+  tags: [demo, dashboard]
+
+  device_catalog:                        # 介绍页展示的设备（device_ref 来源）
+    server:
+      name: Edge Server
+      name_i18n:
+        zh: 边缘服务器
+      image: gallery/cover.png
+      product_url: https://www.seeedstudio.com/reComputer-R1100-p-6253.html
+      description: Runs the dashboard container
+      description_i18n:
+        zh: 运行看板容器
+
+  presets:
+    - id: default                        # 必须与 guide.md 的 {#default} 一致
+      name: Default
+      name_i18n:
+        zh: 默认
+      description: Deploy the dashboard on a server.
+      description_i18n:
+        zh: 在服务器上部署看板。
+      verified:
+        - deploy-smoke                   # 需配套 device YAML 的 docker.ci_smoke: true
+      device_groups:                     # 介绍页展示所需设备，options[].device_ref 必须在 device_catalog 中
+        - id: host
+          name: Server
+          name_i18n:
+            zh: 服务器
+          type: single
+          required: true
+          options:
+            - device_ref: server
+          default: server
+
+  stats:
+    difficulty: beginner
+    estimated_time: 5min
+
+deployment:                              # 部署步骤本身从 guide.md 解析，这里只给文件名
+  guide_file: guide.md
+  guide_file_i18n:
+    zh: guide_zh.md
+  selection_mode: sequential
+```
+
+配套的最小 `devices/web.yaml`（`docker_deploy` + ci_smoke）：
+
+```yaml
+version: "1.0"
+id: web
+name: Deploy Dashboard
+type: docker_deploy
+docker:
+  ci_smoke: true                         # raw-YAML 键，不在 Pydantic schema 里（见 F2 说明）
+  compose_file: ../assets/docker/docker-compose.yml
+docker_remote:
+  compose_file: ../assets/docker/docker-compose.yml
+  remote_path: /opt/hello_dashboard      # remote_path 必填，无 solution_id 兜底
+user_inputs:
+  - id: host
+    name: Server IP
+    type: text
+    default: "127.0.0.1"
+    required: true
+```
+
+`web_dashboard` verify device YAML 见上方 Step 10 的 F4 范例；guide.md 见 Step 10 的 Step/Target 格式。
 
 `description.md` 遵循 `skills/solution-copywriting` 规范。
 

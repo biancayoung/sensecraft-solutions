@@ -15,12 +15,26 @@ Deploy IoT solutions through the provisioning station backend API. The core work
 
 ## 1. Discover Backend
 
+**The installed desktop App uses a dynamic port** (picked at launch to avoid conflicts) — it is **NOT** `3260`. Only the `./dev.sh` development server uses the fixed port `3260`. So discover the port first:
+
 ```bash
-# Default port is 3260, verify it's running
-curl -s http://127.0.0.1:3260/api/health
+# Option A — ask the user: open the App → Settings → API Access, read the port shown there
+
+# Option B — find it automatically (sidecar is launched with --port <PORT>):
+PORT=$(ps aux | grep "[p]rovisioning-station --port" | grep -oE -- "--port [0-9]+" | head -1 | awk '{print $2}')
+echo "Backend port: $PORT"
+
+# Dev mode only (./dev.sh): PORT=3260
 ```
 
-Set `BASE=http://127.0.0.1:3260` for all subsequent commands. If the health check fails, the user needs to start the backend first (`./dev.sh`).
+Then set the base URL and verify it's running:
+
+```bash
+BASE="http://127.0.0.1:${PORT:-3260}"
+curl -s "$BASE/api/health"
+```
+
+Use `$BASE` for all subsequent commands. If the health check fails, the user needs to start the App (or `./dev.sh` in dev mode).
 
 ## 2. Deployment Flow
 
@@ -39,8 +53,10 @@ This is the AI-friendly endpoint — it returns structured parameters and a read
 curl -s "$BASE/api/solutions/{solution_id}/deploy-info?lang=en"
 
 # With preset — returns only steps for that preset (recommended)
-curl -s "$BASE/api/solutions/{solution_id}/deploy-info?lang=en&preset_id=grafana"
+curl -s "$BASE/api/solutions/{solution_id}/deploy-info?lang=en&preset_id=<preset_id>"
 ```
+
+> Don't hardcode a `preset_id` — call without it first, read the available presets from the `presets` array, then re-call with the one the user picks.
 
 **Response structure:**
 - `presets` — available presets with IDs and names
@@ -134,11 +150,11 @@ Poll `/summary` every 3-5 seconds until `status` is `completed` or `failed`.
 **Option B — WebSocket (real-time logs):**
 
 ```bash
-# Single deployment
-websocat "ws://127.0.0.1:3260/ws/logs/{deployment_id}"
+# Single deployment (PORT discovered in Step 1)
+websocat "ws://127.0.0.1:${PORT:-3260}/ws/logs/{deployment_id}"
 
 # All deployments
-websocat "ws://127.0.0.1:3260/ws/all"
+websocat "ws://127.0.0.1:${PORT:-3260}/ws/all"
 ```
 
 Note: the WebSocket path is `/ws/logs/`, not `/ws/deployments/`.
@@ -157,6 +173,8 @@ curl -s -X POST $BASE/api/deployments/{deployment_id}/cancel
 | reCamera (network) | varies | recamera | recamera |
 | reComputer / Jetson | varies | recomputer | 12345678 |
 
+> ⚠️ These are common factory defaults only. **The authoritative values come from the `request_template` in the deploy-info response** — always prefer what the solution's device YAML declares. reCamera in particular is often deployed as `root` (not `recamera`) depending on the device YAML, so use the `username`/`password` from `request_template`.
+
 ## 4. Debugging Failures
 
 1. Check `summary.errors` for high-level error messages
@@ -171,25 +189,27 @@ curl -s -X POST $BASE/api/deployments/{deployment_id}/cancel
 ## 5. Complete Example
 
 ```bash
-BASE=http://127.0.0.1:3260
+# BASE / PORT discovered in Step 1 (dynamic port for the installed App)
+BASE="http://127.0.0.1:${PORT:-3260}"
+SOLUTION_ID=recamera_heatmap_grafana   # whatever solution the user chose
 
-# 1. Get deploy-info (use request_template as starting point)
-curl -s "$BASE/api/solutions/recamera_heatmap_grafana/deploy-info?preset_id=grafana" \
-  | python3 -m json.tool
+# 1. Get deploy-info WITHOUT a preset — read presets + steps from the response
+curl -s "$BASE/api/solutions/$SOLUTION_ID/deploy-info" | python3 -m json.tool
+# → pick a preset_id from .presets[], then re-call with &preset_id=<preset_id>
+# → the `request_template` it returns is the source of truth for
+#   preset_id / selected_devices / device_connections below.
 
-# 2. Start deployment
+# 2. Start deployment — fill in the request_template from step 1.
+#    Do NOT invent step/device IDs: selected_devices and the keys of
+#    device_connections are exactly the step IDs from request_template.
 DEPLOY_ID=$(curl -s -X POST "$BASE/api/deployments/start" \
   -H "Content-Type: application/json" \
   -d '{
-    "solution_id": "recamera_heatmap_grafana",
-    "preset_id": "grafana",
-    "selected_devices": ["backend", "recamera"],
+    "solution_id": "...",                  
+    "preset_id": "<from request_template>",
+    "selected_devices": ["<step_id>", "..."],
     "device_connections": {
-      "backend": {},
-      "recamera": {
-        "host": "192.168.42.1",
-        "password": "recamera"
-      }
+      "<step_id>": { "host": "...", "username": "...", "password": "..." }
     }
   }' | python3 -c "import sys, json; print(json.load(sys.stdin)['deployment_id'])")
 

@@ -230,25 +230,12 @@ lsusb | grep "1a86:55d2"
 python3 -c "import serial.tools.list_ports; [print(p.device, p.description) for p in serial.tools.list_ports.comports()]"
 ```
 
-### Manual Xmodem Flash
+### Manual Xmodem Flash (optional, for bring-up only)
 
-```bash
-# Install dependencies
-pip install xmodem pyserial
+**This skill only produces the device YAML + firmware/model files.** The actual flashing — entering the bootloader, holding the ESP32 in reset, the xmodem transfer, and the per-model preamble packets — is performed by the engine binary at deploy time (same division of labor as `integrate-jetson-solution`). You do **not** need to flash anything yourself to author a solution.
 
-# Use the project's flash script (if available)
-cd ~/project/grove_vision_2/sscma-example-we2/xmodem
-uv run python flash_watcher.py --firmware --models
-```
+If you want to sanity-check a firmware/model file by hand outside the engine, use any generic xmodem-over-serial tool you have installed (e.g. `sb`/`lrzsz`, a serial terminal's xmodem send, or your own small `pyserial` + `xmodem` script). Bring your own tooling and create the environment with `uv` (`uv add xmodem pyserial` in a scratch project) — do not assume any private flashing script is available, and do not `pip install` into system Python. Remember the ESP32-reset-hold requirement above when doing this manually.
 
 ## Reference Solutions
 
 - `solutions/smart_space_assistant/devices/watcher_himax.yaml` - Face recognition example
-
-## Dependencies
-
-Required Python packages:
-- `xmodem` - Xmodem protocol implementation
-- `pyserial` - Serial port communication
-
-These are included in the project's dependencies.
