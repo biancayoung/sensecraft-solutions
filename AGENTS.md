@@ -301,27 +301,35 @@ The engine has two GUI-less usages:
 
 | Usage | Command | Good for |
 |---|---|---|
-| ① One-shot in-process deploy | `solutionctl deploy <id> --connection '<json>' --json [--skip-verify]` | CI, batch deploy, run-once-and-exit |
+| ① One-shot in-process deploy | `solutionctl deploy <id> --preset <p> --connection '<json>'` | CI, batch deploy, run-once-and-exit |
 | ② Headless REST service | `provisioning-station serve --headless` (or `solutionctl manage`, which internally starts `serve --headless`) then hit endpoints | Full device management (start/stop/update/OTA/restore/…), see **Part E** |
+
+> **Local solutions are auto-discovered.** When you run `solutionctl` from inside a clone of this repo (cwd anywhere under the repo root), it sets `PS_SOLUTIONS_DIR` to the clone's `solutions/` automatically — no `--solutions-dir` needed. It also best-effort points `PS_DEVICES_DIR` at the installed desktop App's bundled `devices/` catalog (needed for solutions that reference a `device_class`). Set either env var yourself to override.
 
 ## Usage ① — One-shot in-process deploy
 
-### 1. Locate solution + pick preset/device
+The whole flow is **three commands, zero guessing**: `deploy-info` → fill `--connection` → `deploy`.
+
+### 1. See what the solution needs — `deploy-info`
 
 ```bash
-solutionctl solution list
-solutionctl solution show <solution_id> [--lang en|zh]
+solutionctl solution list                      # discover solution IDs
+solutionctl deploy-info <solution_id> [--preset <p>] [--lang en|zh]
 ```
 
-`solution show` lists every preset and each preset's steps + associated device YAML. **Look before you choose** — don't guess preset names.
+`deploy-info` returns JSON with everything you need to deploy:
+- `presets`: every deployment preset (id + name). Pick one by user intent; **don't guess** — re-run with `--preset <id>` to narrow the steps.
+- `steps`: each step's `device_id`, `type`, and required parameters. Steps with `has_targets: true` (e.g. a `docker_deploy` step) offer **`local` vs `remote` targets** — `local` deploys to this computer's Docker (no SSH), `remote` deploys over SSH to an edge device.
+- `request_template.device_connections`: a **pre-filled connection skeleton** per device, with `<REQUIRED: ...>` placeholders for the blanks the user must provide.
 
-UI-only steps (`web_dashboard` / `image_predict` / `voice_chat`, etc.) are lazy-skipped when run headless; this doesn't affect other steps' deployment, but the user won't get the UI — tell them those steps need the desktop app.
+UI-only steps (`web_dashboard` / `image_predict` / `voice_chat`, etc.) are lazy-skipped when run headless; the user won't get the UI — tell them those steps need the desktop app.
 
 ### 2. Build the `--connection` JSON
 
-Format: `{device_id: {host, username, password, port, target, target_type, ...}}`
+Format: `{device_id: {target, target_type, host, username, password, port, ...}}` — a **nested** dict, not flat. Start from `request_template.device_connections` and fill the placeholders.
 
-Note it is a **nested** dict, not flat. `device_id` must match what `solution show` shows. `target` / `target_type` come from the device YAML's `target:` field (only needed for multi-target solutions).
+- **Local Docker (no SSH):** pick the `local` target — `{"<device_id>": {"target": "<...>_local", "target_type": "local"}}`. No host/credentials needed.
+- **Remote (SSH):** pick the `remote` target and supply `host` / `username` / `password` / `port`.
 
 **Never** invent credentials. Have the user provide them. SSH passwords must always be asked for; redact them as `<REDACTED>` in logs/examples.
 
@@ -332,18 +340,18 @@ solutionctl deploy <solution_id> \
     --preset <preset_id> \
     --device <device_id> \
     --connection '<json>' \
-    --json \
     --replace-existing \
     --yes
 ```
 
 Key flags:
-- `--json` emits an NDJSON event stream (one JSON event per line), machine-parseable; prints a structured result dict at the end then exits by success/failure
+- **Do NOT pass `--json`** — `solutionctl deploy` adds it to the engine internally and renders a clean, converged stream (lifecycle skeleton + error logs only). Passing `--json` yourself is an error.
+- `--verbose` shows the full engine event firehose (docker layer pulls, health polling) when you need to debug
 - `--device` omitted = deploy all steps of the preset (CI scenario); specified = single-step debugging
 - `--skip-verify` skips verify-category interactive steps (for unattended CI)
-- `--replace-existing` auto stop + replace when a same-named container already exists on the remote (default behavior fails and asks the user to confirm)
+- `--replace-existing` auto stop + replace when a same-named container already exists (default behavior fails and asks the user to confirm)
 - `--yes` / `-y` skips confirmation prompts (required for CI)
-- `--solutions-dir` when the solutions tree is not in the default location
+- `--solutions-dir` only when running outside a repo clone and the default location is wrong (normally auto-discovered, see note above)
 
 ### 4. Interpret the result
 
@@ -354,7 +362,26 @@ Process exit code 0 = success, non-zero = failure; the last line prints a result
 - Error contains `Found existing containers: ...` → tell the user to re-run with `--replace-existing`
 - Any raw 60-line traceback → engine bug, have the user file an issue upstream
 
-### CI example
+### Worked example — local Docker (no SSH)
+
+Deploy `smart_warehouse`'s warehouse service to this computer's Docker. From a clone of this repo:
+
+```bash
+# 1. See presets + what the warehouse step needs
+solutionctl deploy-info smart_warehouse --preset sensecraft_cloud
+
+# 2. Pick the LOCAL target (zero credentials) and deploy
+solutionctl deploy smart_warehouse \
+  --preset sensecraft_cloud --device warehouse \
+  --connection '{"warehouse":{"target":"warehouse_local","target_type":"local","auto_replace_containers":true}}' \
+  --yes
+
+# 3. Verify
+docker ps --filter name=mcp_warehouse        # → Up X seconds (healthy)
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:2125/healthz   # → 200
+```
+
+### CI example — remote (SSH)
 
 ```yaml
 # .github/workflows/deploy.yml
@@ -365,7 +392,7 @@ Process exit code 0 = success, non-zero = failure; the last line prints a result
     solutionctl deploy smart_warehouse \
       --preset sensecraft_cloud --device warehouse \
       --connection "{\"warehouse\":{\"host\":\"$JETSON_HOST\",\"username\":\"jetson\",\"password\":\"$DEPLOY_PWD\",\"port\":22,\"target\":\"warehouse_remote\",\"target_type\":\"remote\"}}" \
-      --json --skip-verify --replace-existing --yes
+      --skip-verify --replace-existing --yes
 ```
 
 ## Usage ② — Headless REST service

@@ -30,24 +30,68 @@ allowed-tools: Read, Bash
 
 ## 命令速查
 
+> **从仓库 clone 内跑命令即可**，`solutionctl` 会自动把 `PS_SOLUTIONS_DIR` 指向这个
+> clone 的 `solutions/`（cwd 在 repo 根下任意位置都行），无需 `--solutions-dir`；同时
+> best-effort 把 `PS_DEVICES_DIR` 指向已装桌面 App 的 `devices/` 目录（含 `device_class` 的方案需要）。
+> 命令行不用加 `uv run` 前缀的话直接 `solutionctl`；在 clone 里用
+> `uv run --package sensecraft-solutionctl solutionctl <...>`。
+
 ```bash
 # 看引擎能力 / 契约元数据（版本、支持的 deployer 类型等）
 solutionctl meta
 
-# 发现方案：先列再选 —— 别凭空猜 preset 名！
+# 发现方案：列出所有方案 ID
 solutionctl solution list
-solutionctl solution show <solution_id> [--lang en|zh]
-#   → show 输出 JSON，含每个 preset 的 id / 步骤 / 关联 device YAML
+```
 
-# 部署（一次性，跑完即退）
+### 部署三步法（deploy-info → 填 → deploy）
+
+**别凭空猜 preset 名，也别啃 `solution show` 的原始 JSON。** 走 `deploy-info`：
+
+```bash
+# 1. 看这个方案怎么部署：有哪些 preset、每步要填什么、local/remote 怎么选
+solutionctl deploy-info <solution_id> [--preset <p>] [--lang en|zh]
+#   → JSON 输出：
+#     presets            : 每个 preset 的 id + name（按用户意图选一个，再 --preset 收窄）
+#     steps              : 每步的 device_id / type / 必填参数；
+#                          has_targets=true 的步骤（如 docker_deploy）提供 local vs remote 两种 target
+#                            local  = 部署到本机 Docker（免 SSH）
+#                            remote = SSH 部署到边缘设备
+#     request_template   : 每个 device 预填好的连接骨架，<REQUIRED: ...> 是用户必须补的空
+
+# 2. 从 request_template 拷出来，填好空，组成 --connection（嵌套 dict）
+#    本机 Docker（免 SSH）：选 local target，零凭据
+#      {"<device_id>":{"target":"<...>_local","target_type":"local"}}
+#    远程 SSH：选 remote target，补 host/username/password/port
+#      {"<device_id>":{"target":"<...>_remote","target_type":"remote","host":"...","username":"...","password":"<REDACTED>","port":22}}
+
+# 3. 部署（一次性，跑完即退）—— 注意：不要自己加 --json！
 solutionctl deploy <solution_id> \
     --preset <preset_id> \
     --device <device_id> \
-    --connection '{"<device_id>":{"host":"...","username":"...","password":"<REDACTED>","port":22,"target":"...","target_type":"remote"}}' \
-    --json
-#   --connection 是嵌套 dict：{ device_id: {host, username, password, port, target, target_type, ...} }
-#   device_id 必须和 `solution show` 里的一致；--device 省略 = 部署该 preset 的全部步骤（CI 场景）
+    --connection '<填好的 JSON>' \
+    --yes
+#   device_id 必须和 deploy-info 里的一致；--device 省略 = 部署该 preset 的全部步骤（CI 场景）
+#   --verbose 看完整事件流（docker 拉层 + 轮询）；默认只渲染生命周期骨架 + 错误日志
+#   --replace-existing 同名容器已存在时自动停掉重建（默认会报错让用户确认）
+```
 
+**可复制的本机 Docker 实例**（已实跑验证）：
+
+```bash
+# 从 sensecraft-solutions clone 内
+uv run --package sensecraft-solutionctl solutionctl deploy-info smart_warehouse --preset sensecraft_cloud
+
+uv run --package sensecraft-solutionctl solutionctl deploy smart_warehouse \
+  --preset sensecraft_cloud --device warehouse \
+  --connection '{"warehouse":{"target":"warehouse_local","target_type":"local","auto_replace_containers":true}}' \
+  --yes
+
+docker ps --filter name=mcp_warehouse        # → Up X seconds (healthy)
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:2125/healthz   # → 200
+```
+
+```bash
 # 离线校验一个方案目录是否合规（不需引擎）
 solutionctl validate <solution_path> --spec-dir spec --check-urls
 
@@ -60,17 +104,21 @@ solutionctl manage list-apps
 - **绝不编造凭据**。SSH 主机 / 用户名 / 密码一律向用户索取。
 - 日志、示例、回显里**把密码 redact 成 `<REDACTED>`**，永远不要明文打印。
 
-## `--json` 输出怎么读
+## deploy 输出怎么读
 
-`deploy --json` 输出 **NDJSON 事件流**：每行一个 JSON 对象，**逐行解析**（不要等全部读完再 parse）。
+`solutionctl deploy` **内部已经加了 `--json`**——你**不要**再自己传 `--json`（会 exit 2）。
+默认输出是**收敛过的**人类可读流：只渲染生命周期骨架
+（`device_started` / `pre_check_*` / `device_completed` / `deployment_completed`）+ 错误日志，
+docker 拉层进度和 httpx 轮询噪声被过滤掉。需要全量看用 `--verbose`。
 流的结尾会打印一个结构化的**结果 dict**（`status` + 每个设备的 `steps`）。进程**退出码**：
-`0 = 成功`，`非零 = 失败`。判断真成功：`status: completed/success` 且远端 `docker ps` 显示容器
-`(healthy)`。
+`0 = 成功`，`非零 = 失败`。判断真成功：`status: completed/success` 且 `docker ps` 显示容器
+`(healthy)`。容器明明 `(healthy)` 但报失败 → 多半是 healthcheck 配置 bug（如探了个返回 401 的鉴权端点），
+**不是**部署失败。
 
 ## 能力边界（诚实写清）
 
-CLI **一把梭覆盖**：方案发现（`solution list/show`）、部署（`deploy`）、离线校验（`validate`）、
-引擎元数据（`meta`）。
+CLI **一把梭覆盖**：方案发现（`solution list`）、部署信息（`deploy-info`）、部署（`deploy`）、
+离线校验（`validate`）、引擎元数据（`meta`）。
 
 **设备管理那一大块**——启停 / 更新 / OTA / 恢复出厂 / docker 操作（详见 `AGENTS.md` **Part E**）——
 目前 CLI **只有 `manage list-apps`**，其余全部走 **`serve --headless` + REST 端点**。

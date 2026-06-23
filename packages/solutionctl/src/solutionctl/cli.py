@@ -12,13 +12,19 @@ import json
 import subprocess
 import sys
 
+from ._env import engine_env
 from .engine_locator import EngineNotFoundError, locate_engine
 
 
 def _cmd_meta(_args: argparse.Namespace) -> int:
     engine = locate_engine()
     print(f"Using engine: {engine}", file=sys.stderr)
-    proc = subprocess.run([str(engine), "meta", "--json"], capture_output=True, text=True)
+    proc = subprocess.run(
+        [str(engine), "meta", "--json"],
+        capture_output=True,
+        text=True,
+        env=engine_env(),
+    )
     sys.stderr.write(proc.stderr)
     if proc.returncode == 0:
         try:
@@ -54,6 +60,19 @@ def _cmd_deploy(args: argparse.Namespace) -> int:
         preset=args.preset,
         device=args.device,
         skip_verify=args.skip_verify,
+        solutions_dir=args.solutions_dir,
+        replace_existing=args.replace_existing,
+        verbose=args.verbose,
+    )
+
+
+def _cmd_deploy_info(args: argparse.Namespace) -> int:
+    from .commands import deploy_info
+
+    return deploy_info.run(
+        solution_id=args.solution_id,
+        preset=args.preset,
+        lang=args.lang,
         solutions_dir=args.solutions_dir,
     )
 
@@ -110,7 +129,42 @@ def build_parser() -> argparse.ArgumentParser:
     p_deploy.add_argument("--device", default=None, help="Single device ID")
     p_deploy.add_argument("--skip-verify", action="store_true")
     p_deploy.add_argument("--solutions-dir", default=None)
+    p_deploy.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="Auto stop + replace a same-named container if one already exists "
+        "(otherwise the deploy fails and asks the user to confirm).",
+    )
+    # solutionctl runs the engine non-interactively and always passes the
+    # engine's --yes internally, so this is a no-op accepted for ergonomics /
+    # CI-script symmetry — agents naturally write `--yes` and it should not error.
+    p_deploy.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="Accepted for symmetry; deploys are always non-interactive.",
+    )
+    p_deploy.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show the full engine event stream (docker pulls, polling). "
+        "By default only the lifecycle skeleton + error logs are shown.",
+    )
     p_deploy.set_defaults(func=_cmd_deploy)
+
+    p_deploy_info = sub.add_parser(
+        "deploy-info",
+        help="Show presets, required params, and a fill-and-send deploy template",
+    )
+    p_deploy_info.add_argument("solution_id", help="Solution ID")
+    p_deploy_info.add_argument(
+        "--preset", default=None, help="Filter to a single preset ID"
+    )
+    p_deploy_info.add_argument(
+        "--lang", default=None, choices=["en", "zh"], help="Content language"
+    )
+    p_deploy_info.add_argument("--solutions-dir", default=None)
+    p_deploy_info.set_defaults(func=_cmd_deploy_info)
 
     p_manage = sub.add_parser("manage", help="Drive headless device-management REST")
     p_manage.add_argument("subcommand", help="e.g. list-apps")

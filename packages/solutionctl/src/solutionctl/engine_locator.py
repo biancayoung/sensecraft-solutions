@@ -217,6 +217,61 @@ def _from_native() -> Optional[Path]:
 # --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
+def _devices_from_engine_bin(bin_path: Path) -> Optional[Path]:
+    """Map an installed engine binary path to the App's bundled ``devices/``.
+
+    The ``devices/`` catalog ships as a Tauri-shared resource (NOT PyInstaller
+    datas), so it sits under the resource root rather than next to the binary:
+
+    * **macOS** — ``<App>.app/Contents/MacOS/provisioning-station`` →
+      ``<App>.app/Contents/Resources/_up_/devices``
+    * **Windows / Linux (Tauri v2)** — ``<install>/provisioning-station[.exe]``
+      → ``<install>/_up_/devices`` (NSIS variant: ``<install>/resources/_up_/devices``)
+
+    Returns the first existing candidate, or ``None``.
+    """
+    parent = bin_path.parent
+    candidates = [
+        # macOS: .../Contents/MacOS/<bin> → .../Contents/Resources/_up_/devices
+        parent.parent / "Resources" / "_up_" / "devices",
+        # Windows / Linux Tauri v2: next to the binary
+        parent / "_up_" / "devices",
+        # Windows NSIS
+        parent / "resources" / "_up_" / "devices",
+    ]
+    for cand in candidates:
+        try:
+            if cand.is_dir():
+                return cand
+        except OSError:
+            continue
+    return None
+
+
+def locate_app_devices() -> Optional[Path]:
+    """Best-effort: locate the installed App's bundled ``devices/`` directory.
+
+    Reuses the same platform-native App discovery as engine resolution
+    (mdfind / registry / dpkg, plus the conventional install fallback), then
+    maps each candidate engine-binary path to its sibling ``devices/`` resource
+    via :func:`_devices_from_engine_bin`. Cross-platform best-effort: returns
+    ``None`` when nothing is found (the engine then warns but still runs).
+    """
+    system = platform.system()
+    if system == "Darwin":
+        bin_candidates = _native_candidates_macos()
+    elif system == "Windows":
+        bin_candidates = _native_candidates_windows()
+    else:
+        bin_candidates = _native_candidates_linux()
+
+    for bin_cand in bin_candidates:
+        devices = _devices_from_engine_bin(bin_cand)
+        if devices is not None:
+            return devices
+    return None
+
+
 def locate_engine(handshake_path: Path = HANDSHAKE_PATH) -> Path:
     """Resolve the engine binary using three-level resolution.
 

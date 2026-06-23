@@ -11,7 +11,53 @@ import subprocess
 import sys
 from typing import List, Optional
 
+from .._env import engine_env
 from ..engine_locator import locate_engine
+
+
+# Key event types always rendered (the deploy skeleton: device/step lifecycle,
+# pre-checks, final result). Everything else (notably ``log`` and ``progress``)
+# is treated as noise unless ``--verbose`` is set or the line looks like an error.
+_KEY_EVENT_TYPES = frozenset(
+    {
+        "deployment_completed",
+        "device_started",
+        "device_completed",
+        "pre_check_started",
+        "pre_check_passed",
+        "pre_check_failed",
+        "step_skipped",
+    }
+)
+
+# Substrings that mark a log line as worth surfacing even in non-verbose mode.
+_ERROR_HINTS = ("error", "fail", "exception", "traceback", "denied", "refused")
+
+
+def _is_error_log(event: dict) -> bool:
+    """True if a ``log`` event carries an error-ish message or level."""
+    level = str(event.get("level") or "").lower()
+    if level in ("error", "critical", "warning"):
+        return True
+    msg = str(event.get("message") or "").lower()
+    return any(h in msg for h in _ERROR_HINTS)
+
+
+def _should_render(event: dict, verbose: bool) -> bool:
+    """Decide whether an event is worth printing in the current verbosity.
+
+    Non-verbose: render the key lifecycle events plus any error-ish ``log``.
+    Drop pure-noise ``log`` (docker layer pulls) and ``progress`` (httpx
+    polling) events. Verbose: render everything.
+    """
+    if verbose:
+        return True
+    etype = event.get("type") or event.get("event") or ""
+    if etype in _KEY_EVENT_TYPES:
+        return True
+    if etype == "log":
+        return _is_error_log(event)
+    return False
 
 
 def _render_event(event: dict) -> str:
@@ -57,9 +103,18 @@ def run(
     device: Optional[str] = None,
     skip_verify: bool = False,
     solutions_dir: Optional[str] = None,
+    replace_existing: bool = False,
+    verbose: bool = False,
     extra: Optional[List[str]] = None,
 ) -> int:
-    """Execute a deployment via the engine binary. Returns the exit code."""
+    """Execute a deployment via the engine binary. Returns the exit code.
+
+    The engine reads its solutions/devices dirs from the environment
+    (``PS_SOLUTIONS_DIR`` / ``PS_DEVICES_DIR``) via :func:`engine_env`; we don't
+    pass ``--solutions-dir`` on the command line. Output is converged by default:
+    only the lifecycle skeleton + error logs are rendered (``--verbose`` shows
+    the full docker-pull / httpx-polling firehose).
+    """
     engine = locate_engine()
     print(f"Using engine: {engine}", file=sys.stderr)
 
@@ -72,8 +127,8 @@ def run(
         cmd += ["--device", device]
     if skip_verify:
         cmd += ["--skip-verify"]
-    if solutions_dir:
-        cmd += ["--solutions-dir", solutions_dir]
+    if replace_existing:
+        cmd += ["--replace-existing"]
     if extra:
         cmd += extra
 
@@ -83,6 +138,7 @@ def run(
         stderr=sys.stderr,
         text=True,
         bufsize=1,
+        env=engine_env(solutions_dir),
     )
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -96,7 +152,8 @@ def run(
             print(line)
             continue
         if isinstance(event, dict):
-            print(_render_event(event))
+            if _should_render(event, verbose):
+                print(_render_event(event))
         else:
             print(line)
     return proc.wait()

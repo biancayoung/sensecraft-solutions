@@ -16,16 +16,31 @@ import subprocess
 import sys
 from typing import List, Optional
 
+from .._env import engine_env
 from ..engine_locator import locate_engine
 
 
-def _run_engine(args: List[str]) -> int:
-    """Run ``<engine> <args...>``, stream stdout through, forward exit code."""
+def _run_engine(args: List[str], solutions_dir: Optional[str] = None) -> int:
+    """Run ``<engine> <args...>``, stream stdout through, forward exit code.
+
+    The engine reads its solutions/devices dirs from the environment
+    (``PS_SOLUTIONS_DIR`` / ``PS_DEVICES_DIR``), derived by :func:`engine_env`,
+    so a fresh clone is auto-discovered. We deliberately do NOT pass
+    ``--solutions-dir`` on the command line: the engine's ``--solutions-dir`` is
+    a *top-level* flag (before the subcommand), and appending it after
+    ``solution list`` makes argparse exit 2.
+    """
     engine = locate_engine()
     print(f"Using engine: {engine}", file=sys.stderr)
 
     cmd = [str(engine), *args]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=sys.stderr, text=True)
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=sys.stderr,
+        text=True,
+        env=engine_env(solutions_dir),
+    )
     # Engine already prints JSON; pass it through unchanged.
     sys.stdout.write(proc.stdout)
     if proc.stdout and not proc.stdout.endswith("\n"):
@@ -35,10 +50,7 @@ def _run_engine(args: List[str]) -> int:
 
 def run_list(solutions_dir: Optional[str] = None) -> int:
     """List available solutions (``<bin> solution list``)."""
-    args = ["solution", "list"]
-    if solutions_dir:
-        args += ["--solutions-dir", solutions_dir]
-    return _run_engine(args)
+    return _run_engine(["solution", "list"], solutions_dir=solutions_dir)
 
 
 def run_show(
@@ -50,6 +62,4 @@ def run_show(
     args = ["solution", "show", solution_id]
     if lang:
         args += ["--lang", lang]
-    if solutions_dir:
-        args += ["--solutions-dir", solutions_dir]
-    return _run_engine(args)
+    return _run_engine(args, solutions_dir=solutions_dir)

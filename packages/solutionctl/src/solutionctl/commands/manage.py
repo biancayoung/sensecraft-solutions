@@ -19,6 +19,7 @@ import urllib.request
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
+from .._env import engine_env
 from ..engine_locator import locate_engine
 
 _READY_TIMEOUT = 30.0
@@ -84,6 +85,7 @@ def _headless_engine() -> Iterator[str]:
         stderr=sys.stderr,
         text=True,
         bufsize=1,
+        env=engine_env(),
     )
     try:
         ready = _read_ready_line(proc, _READY_TIMEOUT)
