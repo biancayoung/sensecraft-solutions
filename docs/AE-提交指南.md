@@ -20,8 +20,11 @@
 
 ## 开始前：准备工作（一次性）
 
-1. **装好 SenseCraft App**（用来预览和测试部署）。各平台安装包（macOS / Windows / Linux）在参考设计页下载：<https://www.seeed.cc/category/reference-designs>。
-   > 用**最新版**（≥ 0.6.1）——更早的版本「导入方案预览」有已知问题，已在 0.6.1 修复。
+1. **装好 SenseCraft App**（用来预览和测试部署）。按平台下载安装包（链接始终指向最新版）：
+   - macOS（Apple Silicon）：<https://appcenter.seeed.xyz/SenseCraft.Solution/SenseCraft.Solution_aarch64.dmg>
+   - Windows（x64）：<https://appcenter.seeed.xyz/SenseCraft.Solution/SenseCraft.Solution_x64-setup.exe>
+   - Linux（arm64）：<https://appcenter.seeed.xyz/SenseCraft.Solution/SenseCraft.Solution_arm64.deb>
+   > 「导入方案预览」需 ≥ 0.6.1（上面是最新版，已包含）。
 2. **装 git 和 uv**（uv 是 Python 工具）：
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
