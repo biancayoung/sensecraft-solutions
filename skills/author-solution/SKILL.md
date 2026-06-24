@@ -34,8 +34,8 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 **每个 preset 必须至少有一个 verify 步骤**（让用户立刻看到结果）。`solutionctl validate` 强制检查 verify step 存在。solution 类用 `type=web_dashboard`；technical 类用交互式 verify（`image_predict` / `text_chat` / `voice_chat` / `http_debug` 等）。可用的 verify/step 类型见 `spec/CONTRACT.md`「Deployer capabilities」表。
 - 极少数纯硬件/纯云方案没有本地 dashboard 可指 → 在该 preset 上标 `verify_exempt: true` 豁免（CI 会接受）。
 
-**校验现在查得更全**：`solutionctl validate --check-urls` 会查 schema、引用文件存在、i18n 完整、重复 id、device-ref、**死链（4xx）**、compose/flow 可解析、EN/ZH 结构一致。本地提交前自己跑一遍即可和 CI 一致。
-> ⚠️ `--check-urls` 对图片/封面 URL 也会发请求。**`files.seeedstudio.com` 会被 Cloudflare 拦返回 403 → 校验失败**，别拿它当图片源（详见 Step 11 的图片源警告）。
+**校验现在查得更全**：`solutionctl validate --check-urls` 会查 schema、引用文件存在、i18n 完整、重复 id、device-ref、**死链（404/410）**、compose/flow 可解析、EN/ZH 结构一致。本地提交前自己跑一遍即可和 CI 一致。
+> 说明：`--check-urls` 把 401/403/408/429 当「资源在、只是挡爬虫/限流」放过（如 `files.seeedstudio.com` 套了 Cloudflare，对脚本返回 403 但浏览器/App 正常显示）——这些图片**可放心用**，只有 404/410 这种真死链才报错。
 
 **诚实标注验证等级（可选但推荐）**：在 preset 上加 `verified:` 列表对用户透明——
 - `deploy-smoke`：声明它能在 CI 里起得来。**前提**：该 preset 有一个 `type: docker_deploy` 的 device YAML 在 `docker:` 块里标了 `ci_smoke: true`（仅限轻量 x86 栈；GPU/Jetson/烧固件的别标，CI 起不来）。validate 会强制这个一致性，标了 deploy-smoke 却没 ci_smoke gate 会报错。
@@ -263,9 +263,7 @@ Your service is now running.
 - technical 类需声明输出接口（含路由标识 port/endpoint/topic/path/url）
 - 需要外部输入的方案声明输入要求
 - `device_ref` 必须能在 `intro.device_catalog` 中找到
-- 设备/封面图片用能通过 `--check-urls` 的稳定源（见下方 ⚠️ 图片源警告）
-
-> ⚠️ **图片源警告**：**不要用 `files.seeedstudio.com` 作为图片/封面的 URL** —— 它被 Cloudflare 拦，`solutionctl validate --check-urls` 会拿到 **403**，过不了 skill 自己的 URL 检查。改用能返回 200 的源：方案自带的本地图（`gallery/cover.png`、`assets/...`，用相对路径）或确定可达的公共 CDN（如 `media-cdn.seeedstudio.com`、`sensecraft-statics.seeed.cc`）。
+- 设备/封面图片用稳定可达的源：方案自带本地图（`gallery/cover.png`，相对路径）或公共 CDN（`files.seeedstudio.com`、`media-cdn.seeedstudio.com`、`sensecraft-statics.seeed.cc` 都行）。`--check-urls` 只把 404/410 当死链；`files.seeedstudio.com` 的 Cloudflare 403 会被放过，可放心用。
 
 #### 最小可复制的 `solution.yaml` 骨架（solution 类型）
 
@@ -285,7 +283,7 @@ intro:
   description_file: description.md
   description_file_i18n:
     zh: description_zh.md
-  cover_image: gallery/cover.png        # 本地相对路径，别用 files.seeedstudio.com
+  cover_image: gallery/cover.png        # 本地相对路径，或公共 CDN URL 均可
   category: sensing
   solution_type: solution               # solution | technical
   tags: [demo, dashboard]

@@ -425,5 +425,18 @@ def test_urls_2xx_ok(tmp_path, monkeypatch):
     assert checks.check_urls_reachable(sol, data) == []
 
 
+def test_urls_gated_4xx_tolerated(tmp_path, monkeypatch):
+    """401/403/408/429 = exists-but-gated (CF bot-block, auth, rate-limit) — not dead.
+
+    e.g. files.seeedstudio.com images render fine but 403 a stdlib client;
+    flagging them would be a false positive on a good CDN.
+    """
+    for code in (401, 403, 408, 429):
+        sol = _make_solution(tmp_path / f"s{code}")
+        data = {"intro": {"cover_image": "https://files.seeedstudio.com/x.png"}}
+        monkeypatch.setattr(checks, "_url_status", lambda url, timeout, c=code: c)
+        assert checks.check_urls_reachable(sol, data) == [], f"{code} should be tolerated"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

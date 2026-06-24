@@ -576,16 +576,23 @@ def _url_status(url: str, timeout: float) -> int | None:
 def check_urls_reachable(sol_dir: Path, sol_data: dict, timeout: float = 10) -> list[str]:
     """Check that every ``http(s)://`` reference is reachable.
 
-    Policy (designed to avoid CI flakiness):
-      * **4xx → error** (dead link / typo — the author's fault, deterministic).
-      * network error / timeout / 5xx → NOT a failure (transient / server-side);
-        returns nothing for those cases.
+    Policy (designed to avoid CI flakiness *and* false positives):
+      * **4xx → error** (dead link / typo — the author's fault, deterministic),
+        EXCEPT the "exists but gated" codes below.
+      * **401 / 403 / 408 / 429 → NOT a failure** — the resource exists, the host
+        just refuses automated clients (Cloudflare bot-block, auth, rate-limit).
+        e.g. ``files.seeedstudio.com`` images render fine in a browser / the app
+        but return 403 to this stdlib client; flagging them would be a false
+        positive on a perfectly good CDN.
+      * network error / timeout / 5xx → NOT a failure (transient / server-side).
 
     Stdlib only.
     """
     errors: list[str] = []
+    # 4xx codes meaning "exists but gated", never the author's dead-link bug.
+    _gated = {401, 403, 408, 429}
     for label, url in _collect_urls(sol_dir, sol_data):
         status = _url_status(url, timeout)
-        if status is not None and 400 <= status < 500:
+        if status is not None and 400 <= status < 500 and status not in _gated:
             errors.append(f"dead URL ({status}): {label} -> {url}")
     return errors
