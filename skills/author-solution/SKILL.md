@@ -34,6 +34,31 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 **每个 preset 必须至少有一个 verify 步骤**（让用户立刻看到结果）。`solutionctl validate` 强制检查 verify step 存在。solution 类用 `type=web_dashboard`；technical 类用交互式 verify（`image_predict` / `text_chat` / `voice_chat` / `http_debug` 等）。可用的 verify/step 类型见 `spec/CONTRACT.md`「Deployer capabilities」表。
 - 极少数纯硬件/纯云方案没有本地 dashboard 可指 → 在该 preset 上标 `verify_exempt: true` 豁免（CI 会接受）。
 
+### 选择 verify 验证方式 + 能力不够怎么拓展
+
+**(a) 怎么选** —— 看部署出来的东西是什么，对号入座：
+
+| verify 类型 | 当部署的是… |
+|---|---|
+| `web_dashboard` | 一个网页 UI / 看板（Grafana、Web 应用）—— 本质是「打开这个 URL」 |
+| `image_predict` | 视觉模型 —— 传一张图、看预测结果 |
+| `text_chat` | LLM / 聊天 —— 输入 prompt、看回复 |
+| `image_text_chat` | 视觉语言模型（VLM）—— 图 + 文字 prompt |
+| `image_text_to_image` | 文生图 / 图生图 —— 输入提示词（或图），看生成的图 |
+| `voice_chat` | 语音助手 —— 说话、听 ASR/TTS |
+| `robot_inspect` | **机器人 / 机械臂** —— 实时观测面板，轮询机器人主容器的 `/observation` 端点显示关节/传感器状态 |
+| `http_debug` | **其他任意 HTTP 接口** —— 发请求看响应的通用调试器（**通用兜底**） |
+| 任意步加 `verify=true` | 把一个非标准步骤（如手动 demo）标成 verify 步 |
+
+> 这张是常用速查；**权威完整清单**（含每个类型的配置字段）以 `spec/CONTRACT.md`「Deployer capabilities」表为准。
+
+**(b) 没有合适类型怎么拓展**（按优先级，前 3 条都不改引擎就能做）：
+
+1. **先用通用兜底**：服务暴露 HTTP API 但不是 chat/vision → 用 `http_debug`（任意请求/响应）；只是要打开个页面 → `web_dashboard`（任意 URL）。这俩能覆盖绝大多数「没有专门类型」的情况。
+2. **自定义校验 / 健康检查**：在 device YAML 的 `actions.before` / `actions.after` 写 `run:` 脚本（设备上跑任意 shell，可 `sudo: true`）—— 做部署前预检、部署后健康检查。参考 `solutions/gpt_oss_20b/devices/jetson_deploy.yaml` 的 "Validate Jetson runtime"。**这是不改引擎就能拓展的主力。** 字段名（`actions` / `before` / `after` / `run` / `sudo`）以 `spec/device.schema.json` 为准。
+3. **标记任意步**：`{#id type=... verify=true}` 把任意步骤当成 verify 步。
+4. **以上都不满足**（需要一个全新的交互式 verify 类型 / 新 UI 控件）：这是**引擎（闭源）侧能力**，本仓库加不了 —— 向维护者提 issue 说明你要的交互形态。
+
 **校验现在查得更全**：`solutionctl validate --check-urls` 会查 schema、引用文件存在、i18n 完整、重复 id、device-ref、**死链（404/410）**、compose/flow 可解析、EN/ZH 结构一致。本地提交前自己跑一遍即可和 CI 一致。
 > 说明：`--check-urls` 把 401/403/408/429 当「资源在、只是挡爬虫/限流」放过（如 `files.seeedstudio.com` 套了 Cloudflare，对脚本返回 403 但浏览器/App 正常显示）——这些图片**可放心用**，只有 404/410 这种真死链才报错。
 

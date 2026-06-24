@@ -483,7 +483,7 @@ Gather from the user first — don't invent any of it:
 - the deploy steps (how it was set up) and the success criterion
 - bilingual (EN/ZH) copy — or offer the `solution-copywriting` skill
 
-The skill produces `solutions/<id>/` (`solution.yaml` + bilingual `guide.md`/`description.md` + `devices/` + `assets/`). For deploy artifacts use the matching `prepare-*` skill. Keep the layout **flat** (no `intro/` or `deploy/sections/`); every preset needs **at least one verify step**.
+The skill produces `solutions/<id>/` (`solution.yaml` + bilingual `guide.md`/`description.md` + `devices/` + `assets/`). For deploy artifacts use the matching `prepare-*` skill. Keep the layout **flat** (no `intro/` or `deploy/sections/`); every preset needs **at least one verify step**. For how to pick the verify type (`web_dashboard` / `image_predict` / `text_chat` / `image_text_chat` / `voice_chat` / `http_debug`, or any step with `verify=true`) and what to do when none fit — `http_debug`/`web_dashboard` as generic fallbacks, a custom `actions` `run:` health-check on the device, or filing an engine request for a brand-new interactive type — see the **「选择 verify 验证方式」** section in `skills/author-solution`.
 
 ## 2. Self-validate (offline, no engine, no app)
 
