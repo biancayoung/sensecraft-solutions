@@ -71,6 +71,9 @@ uv sync
 # Validate a solution offline (no engine / app needed):
 uv run --package sensecraft-solutionctl solutionctl validate solutions/jetson_voice_assistant
 
+# Package a solution into an import-ready zip (to preview in the desktop app):
+uv run --package sensecraft-solutionctl solutionctl export jetson_voice_assistant
+
 # Deploy via the installed SenseCraft desktop app (headless):
 uv run --package sensecraft-solutionctl solutionctl deploy jetson_voice_assistant --connection '{...}'
 ```
@@ -94,7 +97,9 @@ uv run --package sensecraft-solutionctl solutionctl deploy jetson_voice_assistan
 
 ## Writing a solution
 
-See [`spec/CONTRACT.md`](spec/CONTRACT.md) for field/syntax rules, `docker_deploy` view derivation, and `guide.md` Step/Target syntax. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the authoring workflow. AI agents: see [`AGENTS.md`](AGENTS.md).
+The fastest path is to let an AI agent drive it: open this repo in an agent (Claude Code auto-loads the skills) and ask it to use the **`author-solution`** skill — it reproduces the project, scaffolds the solution, validates, and helps you preview & submit. Non-developers / AEs have a step-by-step companion: **[the AE submission guide](docs/AE-提交指南.md)**.
+
+Reference docs: [`spec/CONTRACT.md`](spec/CONTRACT.md) for field/syntax rules, `docker_deploy` view derivation, and `guide.md` Step/Target syntax; [`CONTRIBUTING.md`](CONTRIBUTING.md) for the authoring & PR workflow; AI agents: [`AGENTS.md`](AGENTS.md) (**Part F** is the author-and-submit flow).
 
 ## Notes
 

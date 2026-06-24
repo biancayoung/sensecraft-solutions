@@ -12,8 +12,9 @@ This open-source repository contains the **solution content** (YAML / Markdown /
 | **C** | End user with the app installed | "One-click deploy a solution" | HTTP API `/api/solutions/*` boost flow |
 | **D** | DevOps / CI / scripted | Headless batch deploy, CI automation, single-device debugging | **`solutionctl` CLI** (`solutionctl deploy …`) + **headless engine binary** (`provisioning-station serve --headless`) |
 | **E** | DevOps / agent operating deployed devices | List deployed apps, start/stop/update, firmware OTA, factory restore, content updates, Docker ops | **headless engine binary** `serve --headless` + device-management endpoints |
+| **F** | Solution author / AE turning a project into a solution | Convert an existing project into a one-click solution, then submit it | `author-solution` skill + `solutionctl validate` + PR |
 
-> Note: a fifth role — second-development of the engine itself (adding deployers / frontend handlers / plugins) — lives in the closed-source engine repository and is intentionally out of scope here.
+> Note: a sixth role — second-development of the engine itself (adding deployers / frontend handlers / plugins) — lives in the closed-source engine repository and is intentionally out of scope here.
 
 The agent should **identify the user role first, then pick the Part** — don't mix them.
 
@@ -458,3 +459,50 @@ First start `serve --headless` per **Part D usage ②** to get `base_url` (or re
 - **Always ask for SSH passwords**: passwords for remote operations must always be requested from the user, **never invented**; use `<REDACTED>` in logs/examples.
 - **Confirm destructive operations first**: `update` (pull new image + restart), `restore` (factory reset), `action: stop` (stop a service) must be **confirmed with the user** before execution. When `active` already shows the same solution running, clarify whether it's update-in-place or a fresh deploy.
 - **Context budget**: prefer `active` / `summary` / `status` (small), only pull `logs` on failure.
+
+---
+
+# Part F — Authoring & submitting a new solution
+
+**Typical triggers:**
+> "Turn this project / wiki into a one-click solution"
+> "Create a solution for <hardware> and submit it to the platform"
+
+This is the **agent-executable** version of the submission flow. The human-facing
+companion an AE reads is [`docs/AE-提交指南.md`](docs/AE-提交指南.md) — same four
+steps, written for a person. Here they are as agent instructions: **author →
+self-validate → preview → submit**.
+
+## 1. Author (load the `author-solution` skill)
+
+Gather from the user first — don't invent any of it:
+- what the project does + who it's for (one-line value)
+- target hardware
+- deploy method (Docker Compose / firmware flash / reCamera flow / …)
+- the deploy artifacts that make it run (`docker-compose.yml`, firmware `.bin`, `flow.json`, …)
+- the deploy steps (how it was set up) and the success criterion
+- bilingual (EN/ZH) copy — or offer the `solution-copywriting` skill
+
+The skill produces `solutions/<id>/` (`solution.yaml` + bilingual `guide.md`/`description.md` + `devices/` + `assets/`). For deploy artifacts use the matching `prepare-*` skill. Keep the layout **flat** (no `intro/` or `deploy/sections/`); every preset needs **at least one verify step**.
+
+## 2. Self-validate (offline, no engine, no app)
+
+```bash
+uv run --package sensecraft-solutionctl solutionctl validate solutions/<id> --spec-dir spec --check-urls
+```
+
+Fix until green. `--check-urls` flags only real dead links (404/410); 401/403/408/429 (e.g. Cloudflare-fronted `files.seeedstudio.com`) are tolerated, so a 403 there is **not** a failure.
+
+## 3. Preview in the app (load `preview-solution-content`)
+
+Needs the installed desktop app (**≥ 0.6.1** — earlier versions can't import). Package with `solutionctl export <id>`, import via the app's API, then verify: solution shows up, images/copy/bilingual render, deploy steps read correctly. A **real device deploy** is the only way to confirm output correctness — recommend it.
+
+## 4. Submit (PR)
+
+Open a Pull Request to this repo (you do git/gh natively — see [`CONTRIBUTING.md`](CONTRIBUTING.md)). CI runs `guard` + `validate` (+ `docker-smoke` for `ci_smoke`-marked Docker solutions). All green → a maintainer reviews and merges → the solution ships to users via OTA.
+
+## Rules of good behavior
+
+- **Never invent** deploy credentials, hosts, or device values — ask the user.
+- Don't push binaries (firmware `.bin`, models, `.deb`) into the repo — host them on a CDN and reference by URL.
+- One solution per PR; don't bundle unrelated changes.
