@@ -114,6 +114,25 @@ remote_overrides:
         run: mkdir -p /data-iot/respeaker/recordings /data-iot/respeaker/models /data-iot/respeaker/voiceprints /data-iot/respeaker/logs
         name_i18n:
           zh: 创建数据目录
+      - name: Download ASR models
+        run: |
+          set -e
+          cd /data-iot/respeaker
+          if [ -f models/asr/tokens.txt ]; then
+            echo "ASR models already present, skipping download"
+          else
+            command -v unzip >/dev/null 2>&1 || { opkg update && opkg install unzip; }
+            echo "Downloading ASR models (~460MB, this can take several minutes)..."
+            wget -q -O /tmp/models.zip 'https://files.seeedstudio.com/wiki/solution/ai-sound/reRouter-firmware-backup/models.zip'
+            echo '7b9e7606a2ddcad56f3f72a77b16eb2c60437ae4bfc3f1423bd33db177385c9d  /tmp/models.zip' | sha256sum -c -
+            # Archive has a top-level models/ dir, so extract into the parent
+            # to land at /data-iot/respeaker/models/{asr,vad,speaker,...}
+            unzip -oq /tmp/models.zip -d /data-iot/respeaker
+            rm -f /tmp/models.zip
+            echo "ASR models ready"
+          fi
+        name_i18n:
+          zh: 下载语音识别模型
       - name: Download default configuration
         run: |
           cd /data-iot/respeaker
