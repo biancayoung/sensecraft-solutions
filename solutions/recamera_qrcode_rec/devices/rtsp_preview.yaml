@@ -1,0 +1,12 @@
+version: "1.0"
+id: rtsp_preview
+name: RTSP Video Preview
+name_i18n:
+  zh: RTSP 视频预览
+type: video_stream
+
+video:
+  url: rtsp://{{host}}:8554/live0
+  title: reCamera QR video stream
+  title_i18n:
+    zh: reCamera 二维码识别视频流

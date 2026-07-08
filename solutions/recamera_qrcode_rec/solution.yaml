@@ -1,0 +1,62 @@
+version: "1.0"
+id: recamera_qrcode_rec
+name: reCamera QR Code Recognition
+name_i18n:
+  zh: reCamera 实时二维码识别
+
+intro:
+  summary: Run real-time QR code recognition on reCamera, stream live video over RTSP, and expose the latest QR result through an HTTP API.
+  summary_i18n:
+    zh: 在 reCamera 上运行实时二维码识别，通过 RTSP 输出视频流，并通过 HTTP API 获取最新二维码结果。
+  description_file: description.md
+  description_file_i18n:
+    zh: description_zh.md
+  category: vision
+  solution_type: solution
+  tags:
+    - recamera
+    - qrcode
+    - rtsp
+    - http
+    - sg2002
+  input_requirements:
+    - type: camera
+      description: reCamera 2002 Series with a clear view of QR codes
+      description_i18n:
+        zh: reCamera 2002 系列设备，并能清晰拍摄二维码
+  device_catalog:
+    recamera:
+      sku: 102991897
+      name: reCamera 2002 Series
+      name_i18n:
+        zh: reCamera 2002 系列
+      description: AI camera running local QR code recognition
+      description_i18n:
+        zh: 在本地运行二维码识别的 AI 摄像头
+  presets:
+    - id: default
+      name: Native Binary Deployment
+      name_i18n:
+        zh: 原生可执行文件部署
+      description: Deploy the prebuilt qrcode_rec executable to reCamera.
+      description_i18n:
+        zh: 将已经编译好的 qrcode_rec 可执行文件部署到 reCamera。
+      device_groups:
+        - id: camera
+          name: reCamera
+          name_i18n:
+            zh: reCamera
+          type: single
+          required: true
+          options:
+            - device_ref: recamera
+              default: recamera
+  stats:
+    difficulty: beginner
+    estimated_time: 5min
+
+deployment:
+  guide_file: guide.md
+  guide_file_i18n:
+    zh: guide_zh.md
+  selection_mode: sequential
