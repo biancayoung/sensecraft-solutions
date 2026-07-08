@@ -1,3 +1,3 @@
 # Assets
 
-Place the prebuilt `qrcode_rec` executable here.
+Runtime binaries are hosted in Seeed solution assets and referenced from the deploy config.

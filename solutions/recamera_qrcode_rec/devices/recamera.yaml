@@ -47,7 +47,7 @@ actions:
       timeout: 30
 
 files:
-  - url: assets/qrcode_rec
+  - url: https://sensecraft-statics.seeed.cc/solution-app/recamera_qrcode_rec/qrcode_rec-bed92aba
     remote_path: /home/recamera/qrcode_rec
     sudo: false
 

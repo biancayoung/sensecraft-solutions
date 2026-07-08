@@ -16,19 +16,11 @@ Deploy a prebuilt `qrcode_rec` executable to reCamera. Users do not need to comp
 
 - reCamera 2002 Series
 - SSH access to reCamera
-- Prebuilt executable file: `assets/qrcode_rec`
+- Internet access from the machine running deployment, so the prebuilt executable can be downloaded from Seeed solution assets
 
 ## Step 1: Deploy the binary to reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
 
-Copy the prebuilt `qrcode_rec` executable to reCamera, stop default camera services, grant execute permission, and start the QR recognition program.
-
-### Prerequisites
-
-Before deployment, make sure the executable exists in the solution directory:
-
-```text
-solutions/recamera_qrcode_rec/assets/qrcode_rec
-```
+Download the prebuilt `qrcode_rec` executable, copy it to reCamera, stop default camera services, grant execute permission, and start the QR recognition program.
 
 ### Deployment Complete
 

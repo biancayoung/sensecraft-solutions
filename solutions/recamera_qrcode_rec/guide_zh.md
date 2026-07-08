@@ -16,19 +16,11 @@
 
 - reCamera 2002 系列
 - 可以通过 SSH 访问 reCamera
-- 已编译好的可执行文件：`assets/qrcode_rec`
+- 运行部署的电脑可以访问网络，用于从 Seeed solution assets 下载预编译可执行文件
 
 ## 步骤 1: 部署可执行文件到 reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
 
-将已经编译好的 `qrcode_rec` 可执行文件复制到 reCamera，停止默认摄像头服务，添加可执行权限，并启动二维码识别程序。
-
-### 前置条件
-
-部署前请确认可执行文件已经放在方案目录中：
-
-```text
-solutions/recamera_qrcode_rec/assets/qrcode_rec
-```
+下载已经编译好的 `qrcode_rec` 可执行文件，将它复制到 reCamera，停止默认摄像头服务，添加可执行权限，并启动二维码识别程序。
 
 ### 部署完成
 
