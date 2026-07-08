@@ -1,0 +1,53 @@
+# Voice-Controlled Grasping Arm
+
+Say **"Hey Jarvis, grab the water bottle"** — the arm looks at the table through its wrist-mounted RGB-D camera, finds the bottle, plans a grasp and picks it up, then tells you what it did. Everything runs on the Jetson: wake word, speech recognition, the LLM that parses your intent, object detection, grasp planning and speech synthesis. No cloud, no online API.
+
+## What it can grasp
+
+| Object | Strategy | Status |
+|---|---|---|
+| Cardboard boxes | side-face geometric grasp (multi-frame median, force 0.8 N·m) | verified |
+| Cups (opaque, short) | side-face grasp, adaptive force | verified |
+| Standing bottles (opaque) | cylinder route: level side approach, mid-body grip, fixed 0.8 N·m | verified |
+| Fruit (orange/apple) | round route (grip past the equator) | code-ready, not yet field-tested |
+| Transparent bottles | — | not possible: stereo depth cannot see clear plastic + water |
+
+Objects too wide for the 0.088 m jaw get a spoken decline ("The box is too big for me to grip").
+
+## How it works
+
+```
+reSpeaker mic ─▶ wake word ─▶ streaming ASR ─▶ Qwen3-4B (TensorRT-Edge-LLM)
+                                                    │  grasp_object("water bottle")
+                                                    ▼
+                            Orbbec Gemini2 ─▶ YOLOE open-vocab detector (10 classes)
+                                                    │  instance mask
+                                                    ▼
+                              depth cloud ─▶ PCA shape descriptor (elongation /
+                              planarity / spine-bend) ─▶ route: box faces |
+                              cylinder | elongated | round ─▶ 6-DoF grasp pose
+                                                    │
+                                                    ▼
+                              reBot B601-DM: approach ─ grip (force-controlled)
+                              ─ lift ─ carry home ─▶ TTS confirmation
+```
+
+Four containers, one compose file:
+
+- **rebot-arm** — the agent: wake word, camera, detection, grasp pipeline, arm control, dashboard (`:8776`) and observation API (`:8775`)
+- **seeed-voice** — streaming ASR + TTS (CUDA)
+- **edge-llm** — Qwen3-4B-AWQ on TensorRT-Edge-LLM (`:8000`)
+- **warehouse** — an MCP inventory service the agent can consult (`:2125`)
+
+The multi-class detector was exported from open-vocabulary YOLOE weights, so the recognizable object list is a re-export away from being extended — no retraining.
+
+## The one manual step
+
+**Hand-eye calibration** (one-time, ~30 min): grasping needs millimeter-accurate camera-to-arm geometry, which is physically unique to each unit. The guide walks through collecting ~16 poses of a printed ArUco board and solving for the transform. Until it's done, voice chat, detection and the dashboard all work — only grasping waits.
+
+## Requirements
+
+- reComputer J4012 / Jetson Orin NX 16 GB (JetPack 6) — the compose file mounts host CUDA/TensorRT
+- reBot B601-DM arm (USB serial) + Orbbec Gemini 2 on the wrist (USB 3.0)
+- reSpeaker USB mic + any speaker
+- ~4 GB of model downloads on first boot (LLM engine, speech models, detector)

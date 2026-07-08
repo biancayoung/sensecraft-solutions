@@ -1,0 +1,158 @@
+version: "1.0"
+id: voice_rebot_arm
+name: Voice-Controlled Grasping Arm (reBot B601-DM)
+intro:
+  summary: Say "Hey Jarvis, grab the water bottle" and a reBot B601-DM arm finds the object with an RGB-D wrist camera and picks it up. Grasps boxes, cups and standing bottles via an open-vocabulary detector (YOLOE) + 3D shape-descriptor grasp planner. Fully on-device voice stack — streaming ASR/TTS + Qwen3-4B-AWQ on TensorRT-Edge-LLM — on Jetson Orin NX.
+  description_file: description.md
+  cover_image: gallery/cover.jpg
+  category: voice_ai
+  solution_type: technical
+  tags: [voice, robot, grasping, rebot, jetson, orbbec, rgbd, yoloe, local-llm, qwen3, edge-llm, asr, tts, offline, mcp]
+
+  output_interfaces:
+    - type: http
+      port: 8776
+      endpoint: /api/state
+      method: GET
+      description: Arm + grasp pipeline state (pose, gripper, last grasp result)
+      schema_type: json
+      payload_example: '{"x":0.27,"y":0.0,"z":0.24,"gripper":-4.77,"gripper_holding":false}'
+      description_i18n:
+        zh: 机械臂 + 抓取流水线状态（位姿、夹爪、最近一次抓取结果）
+    - type: http
+      port: 8776
+      endpoint: /api/frame.jpg
+      method: GET
+      description: Latest wrist-camera color frame (JPEG)
+      schema_type: binary
+      description_i18n:
+        zh: 腕部相机最新彩色帧（JPEG）
+    - type: http
+      port: 8775
+      endpoint: /observation
+      method: GET
+      description: Cartesian arm observation (x/y/z + gripper state) for integrations
+      schema_type: json
+      payload_example: '{"x":0.27,"y":0.0,"z":0.24,"gripper":-4.77,"gripper_holding":false}'
+      description_i18n:
+        zh: 机械臂笛卡尔观测（x/y/z + 夹爪状态），供其他方案集成
+
+  input_requirements:
+    - type: audio
+      description: reSpeaker USB microphone array for wake word + voice commands
+      description_i18n:
+        zh: reSpeaker USB 麦克风阵列，用于唤醒词与语音指令
+    - type: audio
+      description: Speaker for TTS voice feedback
+      description_i18n:
+        zh: 音箱用于语音回复
+    - type: usb
+      description: reBot B601-DM arm via USB serial (typically /dev/ttyACM0) and Orbbec Gemini2 RGB-D camera mounted on the wrist via USB 3.0
+      description_i18n:
+        zh: reBot B601-DM 机械臂通过 USB 串口连接（通常 /dev/ttyACM0），Orbbec Gemini2 RGB-D 相机装在手腕上，USB 3.0 连接
+    - type: network
+      description: Internet on first boot to pull container images and download models (LLM engine, speech models, grasp detector — ~4 GB total). Runtime inference is fully local, no online API.
+      description_i18n:
+        zh: 首次启动需联网拉取容器镜像并下载模型（LLM 引擎、语音模型、抓取检测模型，共约 4GB）。运行期间推理全部本地完成，不依赖在线 API。
+
+  device_catalog:
+    rebot_b601dm:
+      name: reBot B601-DM Robotic Arm
+      description: 6-DoF robotic arm with Damiao motors and a parallel gripper (0.088 m max jaw)
+      name_i18n:
+        zh: reBot B601-DM 机械臂
+      description_i18n:
+        zh: 六自由度达妙电机机械臂，平行夹爪（最大开口 0.088 m）
+    orbbec_gemini2:
+      name: Orbbec Gemini 2 RGB-D Camera
+      product_url: https://www.orbbec.com/products/stereo-vision-camera/gemini-2/
+      description: Stereo-depth RGB-D camera, wrist-mounted (eye-in-hand)
+      name_i18n:
+        zh: 奥比中光 Gemini 2 RGB-D 相机
+      description_i18n:
+        zh: 双目深度 RGB-D 相机，装于手腕（眼在手）
+    respeaker_mic:
+      name: reSpeaker USB Mic Array
+      product_url: https://www.seeedstudio.com/reSpeaker-Flex-XVF3800-Circular-4-p-6737.html
+      description: USB microphone array for far-field voice capture
+      name_i18n:
+        zh: reSpeaker USB 麦克风阵列
+      description_i18n:
+        zh: USB 麦克风阵列，远场语音采集
+    recomputer_j4012:
+      sku: 110110145
+      name: reComputer Super J4012 (Jetson Orin NX 16GB)
+      image: https://media-cdn.seeedstudio.com/media/catalog/product/cache/7f7f32ef807b8c2c2215b49801c56084/1/-/1-110110145-recomputer_j4012.jpg
+      product_url: https://www.seeedstudio.com/reComputer-J4012-p-5586.html
+      description: NVIDIA Jetson Orin NX 16GB edge AI computer (JetPack 6)
+      name_i18n:
+        zh: reComputer Super J4012（Jetson Orin NX 16GB）
+      description_i18n:
+        zh: NVIDIA Jetson Orin NX 16GB 边缘 AI 主机（JetPack 6）
+
+  presets:
+    - id: default
+      name: Voice Grasping on Jetson
+      description: Deploy the full 4-service stack (voice, LLM, warehouse MCP, arm agent) to a Jetson Orin NX with one compose file, then verify via the live dashboard. Hand-eye calibration (one-time, on-site) unlocks grasping.
+      device_groups:
+        - id: arm
+          name: Robotic Arm
+          type: single
+          required: true
+          options:
+            - device_ref: rebot_b601dm
+          default: rebot_b601dm
+          name_i18n:
+            zh: 机械臂
+        - id: camera
+          name: Depth Camera
+          type: single
+          required: true
+          options:
+            - device_ref: orbbec_gemini2
+          default: orbbec_gemini2
+          name_i18n:
+            zh: 深度相机
+        - id: microphone
+          name: Microphone
+          type: single
+          required: true
+          options:
+            - device_ref: respeaker_mic
+          default: respeaker_mic
+          name_i18n:
+            zh: 麦克风
+        - id: rebot_stack
+          name: Compute Unit
+          type: single
+          required: true
+          options:
+            - device_ref: recomputer_j4012
+          default: recomputer_j4012
+          name_i18n:
+            zh: 计算单元
+      name_i18n:
+        zh: Jetson 上的语音抓取
+      description_i18n:
+        zh: 一个 compose 文件将 4 个服务（语音、LLM、仓储 MCP、机械臂 agent）整体部署到 Jetson Orin NX，随后通过实时面板验证。完成一次性的手眼标定后即可解锁抓取。
+
+  stats:
+    difficulty: advanced
+    estimated_time: 60min
+    deployed_count: 0
+    likes_count: 0
+
+  links:
+    repository: https://github.com/suharvest/openvoicestream
+
+  summary_i18n:
+    zh: 对着麦克风说 "Hey Jarvis, grab the water bottle"，reBot B601-DM 机械臂用腕部 RGB-D 相机找到目标并抓起来。开放词表检测器（YOLOE）+ 3D 形状描述子抓取规划，可抓纸盒、水杯与直立的瓶子。语音链路完全本地化 —— 流式 ASR/TTS + Qwen3-4B-AWQ（TensorRT-Edge-LLM）—— 跑在 Jetson Orin NX。
+  description_file_i18n:
+    zh: description_zh.md
+deployment:
+  guide_file: guide.md
+  selection_mode: sequential
+  guide_file_i18n:
+    zh: guide_zh.md
+name_i18n:
+  zh: 语音抓取机械臂（reBot B601-DM）
