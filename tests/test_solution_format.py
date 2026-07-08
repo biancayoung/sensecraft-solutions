@@ -896,6 +896,48 @@ class TestChineseMarkdownNoEnglishTemplates:
         assert offenders == ["English troubleshooting table header"]
 
 
+class TestVideoStreamUsesInAppPreview:
+    """Video-stream verify steps should use the app preview, not manual players."""
+
+    _FENCE_PATTERN = re.compile(r"```[^\n]*\n.*?\n```", re.DOTALL)
+    _STEP_HEADER_RE = re.compile(
+        r"(?m)^##\s+(?:Step|步骤)\s*\d+[：:].*?\{#[^}]*\btype=video_stream\b[^}]*\}\s*$"
+    )
+    _NEXT_STEP_RE = re.compile(r"(?m)^##\s+(?:Step|步骤)\s*\d+[：:]")
+    _MANUAL_PLAYER_RE = re.compile(r"\b(?:ffplay|vlc|VLC|mplayer|mpv)\b")
+
+    def test_video_stream_steps_do_not_require_external_players(self):
+        root = Path(__file__).resolve().parents[1] / "solutions"
+        offenders = []
+        for guide in sorted(root.glob("*/guide*.md")):
+            content = guide.read_text(encoding="utf-8")
+            stripped = self._FENCE_PATTERN.sub("", content)
+            for m in self._STEP_HEADER_RE.finditer(stripped):
+                next_m = self._NEXT_STEP_RE.search(stripped, m.end())
+                section = stripped[m.end() : next_m.start() if next_m else len(stripped)]
+                if self._MANUAL_PLAYER_RE.search(section):
+                    line = stripped[: m.start()].count("\n") + 1
+                    offenders.append(f"{guide.relative_to(root)}:L{line}: {m.group(0)}")
+
+        assert not offenders, (
+            "`type=video_stream` steps should render video inside the app. "
+            "Do not make ffplay/VLC/mpv the primary verification path; keep "
+            "external-player commands only in deep troubleshooting outside the "
+            "main video_stream step.\n  "
+            + "\n  ".join(offenders)
+        )
+
+    def test_lint_catches_ffplay_in_video_stream_step(self):
+        sample = (
+            "## Step 2: Verify {#v type=video_stream config=devices/v.yaml}\n\n"
+            "Run ffplay rtsp://device/live0.\n"
+        )
+        stripped = self._FENCE_PATTERN.sub("", sample)
+        m = self._STEP_HEADER_RE.search(stripped)
+        assert m
+        assert self._MANUAL_PLAYER_RE.search(stripped[m.end() :])
+
+
 class TestTargetHeadingDeclaresType:
     """Every `### Target {...}` / `### 部署目标 {...}` heading must declare
     `type=local` or `type=remote` in its attribute block.

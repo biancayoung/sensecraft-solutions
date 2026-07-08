@@ -65,6 +65,7 @@ provisioning engine and open-source consumers. Authoritative artifacts:
 | `ha_integration` | HAIntegrationConfig \| null | no | None |  |
 | `video` | PreviewVideoConfig \| null | no | None |  |
 | `mqtt` | PreviewMqttConfig \| null | no | None |  |
+| `data` | PreviewDataConfig \| null | no | None | HTTP polling source for preview overlays |
 | `overlay` | PreviewOverlayConfig \| null | no | None |  |
 | `display` | PreviewDisplayConfig \| null | no | None |  |
 | `behavior` | PreviewBehaviorConfig \| null | no | None |  |

@@ -42,15 +42,11 @@ Health    : http://<device-ip>:8080/api/health
 | 摄像头资源被占用 | 停止 Node-RED 和 sscma-node 服务后重新运行。 |
 | 程序立即退出 | 在 reCamera 上运行 `cat /tmp/qrcode_rec.log` 查看日志。 |
 
-## 步骤 2: 验证 RTSP 视频流 {#verify_rtsp type=video_stream required=false config=devices/rtsp_preview.yaml}
+## 步骤 2: 预览二维码识别效果 {#verify_rtsp type=video_stream required=true config=devices/rtsp_preview.yaml}
 
-打开 RTSP 视频流，确认摄像头画面可以正常显示。
+在软件里打开预览窗口。把 reCamera 对准清晰二维码后，预览窗口应能直接显示实时画面，并把解码文本直接叠加在画面上。
 
-也可以在 PC 上手动验证：
-
-```bash
-ffplay rtsp://<device-ip>:8554/live0
-```
+这个预览就是部署验证，不需要再打开外部播放器。
 
 ### 故障排查
 
@@ -58,36 +54,5 @@ ffplay rtsp://<device-ip>:8554/live0
 | --- | --- |
 | RTSP 无法打开 | 确认程序正在运行，并且 `8554` 端口可以访问。 |
 | 视频路径错误 | RTSP 路径使用 `live0`。 |
-
-## 步骤 3: 验证二维码结果 API {#verify_qr_api type=http_debug required=false config=devices/qr_api.yaml}
-
-查询最新一次二维码识别结果。
-
-手动测试命令：
-
-```bash
-curl http://<device-ip>:8080/api/qr/latest
-```
-
-示例返回：
-
-```json
-{
-  "ok": true,
-  "qr_found": true,
-  "frame_id": 123,
-  "detect_cost_ms": 35,
-  "codes": [
-    {
-      "text": "https://www.seeedstudio.com"
-    }
-  ]
-}
-```
-
-### 故障排查
-
-| 问题 | 解决方法 |
-| --- | --- |
 | API 无法访问 | 确认 HTTP 服务正在监听 `8080` 端口。 |
 | 未识别到二维码 | 确认二维码清晰、足够大，并且没有明显模糊。 |

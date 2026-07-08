@@ -1944,6 +1944,30 @@
       "title": "PreviewDisplayConfig",
       "type": "object"
     },
+    "PreviewDataConfig": {
+      "description": "HTTP polling data source for preview overlays",
+      "properties": {
+        "http_url_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Url Template"
+        },
+        "interval_ms": {
+          "default": 1000,
+          "title": "Interval Ms",
+          "type": "integer"
+        }
+      },
+      "title": "PreviewDataConfig",
+      "type": "object"
+    },
     "PreviewMqttConfig": {
       "description": "MQTT configuration for preview",
       "properties": {
@@ -3109,6 +3133,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/BinaryConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PreviewDataConfig"
         },
         {
           "type": "null"

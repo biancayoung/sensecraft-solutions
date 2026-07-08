@@ -6,7 +6,22 @@ name_i18n:
 type: video_stream
 
 video:
-  url: rtsp://{{host}}:8554/live0
+  type: rtsp_proxy
+  rtsp_url_template: rtsp://{{host}}:8554/live0
   title: reCamera QR video stream
   title_i18n:
     zh: reCamera 二维码识别视频流
+
+data:
+  http_url_template: http://{{host}}:8080/api/qr/latest
+  interval_ms: 1000
+
+overlay:
+  renderer: custom
+  script_file: preview/draw_qrcode.js
+  dependencies: []
+
+display:
+  aspect_ratio: "16:9"
+  auto_start: true
+  show_stats: true

@@ -46,6 +46,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 | `image_text_chat` | 视觉语言模型（VLM）—— 图 + 文字 prompt |
 | `image_text_to_image` | 文生图 / 图生图 —— 输入提示词（或图），看生成的图 |
 | `voice_chat` | 语音助手 —— 说话、听 ASR/TTS |
+| `video_stream` | RTSP / MJPEG / HLS 视频输出 —— 直接在 app 的预览窗口看画面 |
 | `robot_inspect` | **机器人 / 机械臂** —— 实时观测面板，轮询机器人主容器的 `/observation` 端点显示关节/传感器状态 |
 | `http_debug` | **其他任意 HTTP 接口** —— 发请求看响应的通用调试器（**通用兜底**） |
 | 任意步加 `verify=true` | 把一个非标准步骤（如手动 demo）标成 verify 步 |
@@ -55,6 +56,8 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 **(b) 没有合适类型怎么拓展**（按优先级，前 3 条都不改引擎就能做）：
 
 1. **先用通用兜底**：服务暴露 HTTP API 但不是 chat/vision → 用 `http_debug`（任意请求/响应）；只是要打开个页面 → `web_dashboard`（任意 URL）。这俩能覆盖绝大多数「没有专门类型」的情况。
+   - 如果结果本身是 RTSP / MJPEG / HLS 视频流，优先用 `video_stream`，不要写成“打开 ffplay/VLC 手动验证”。能在 app 里看到的结果就应在 app 里预览。
+   - 如果一个视频方案同时暴露“最新结果 API”（例如二维码识别文本、检测 JSON），不要为了 curl 再单独加一个 `http_debug` 验证步骤；优先用 `video_stream` 的 overlay，在预览窗口里直接叠加结果。HTTP 最新结果可配置为 `data.http_url_template`，配合 `overlay.script_file` 渲染。只有当 API 返回本身是用户要看的主要结果、且没有可视化预览时，才用 `http_debug`。
 2. **自定义校验 / 健康检查**：在 device YAML 的 `actions.before` / `actions.after` 写 `run:` 脚本（设备上跑任意 shell，可 `sudo: true`）—— 做部署前预检、部署后健康检查。参考 `solutions/gpt_oss_20b/devices/jetson_deploy.yaml` 的 "Validate Jetson runtime"。**这是不改引擎就能拓展的主力。** 字段名（`actions` / `before` / `after` / `run` / `sudo`）以 `spec/device.schema.json` 为准。
 3. **标记任意步**：`{#id type=... verify=true}` 把任意步骤当成 verify 步。
 4. **以上都不满足**（需要一个全新的交互式 verify 类型 / 新 UI 控件）：这是**引擎（闭源）侧能力**，本仓库加不了 —— 要么用插件原型化（见 `docs/plugin-development.md`），要么提一个[能力需求 issue](https://github.com/suharvest/sensecraft-solutions/issues/new?template=new-capability-request.md)说明你要的交互形态。

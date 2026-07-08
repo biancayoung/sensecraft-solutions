@@ -20,7 +20,7 @@ intro:
     - http
     - sg2002
   input_requirements:
-    - type: camera
+    - type: rtsp
       description: reCamera 2002 Series with a clear view of QR codes
       description_i18n:
         zh: reCamera 2002 系列设备，并能清晰拍摄二维码

@@ -1227,6 +1227,9 @@
     "PreviewConfig": {
       "description": "Complete preview configuration for a deployment step",
       "properties": {
+        "data": {
+          "$ref": "#/$defs/PreviewDataConfig"
+        },
         "display": {
           "$ref": "#/$defs/PreviewDisplayConfig"
         },
@@ -1271,6 +1274,30 @@
         }
       },
       "title": "PreviewDisplayConfig",
+      "type": "object"
+    },
+    "PreviewDataConfig": {
+      "description": "HTTP polling data source for preview overlays",
+      "properties": {
+        "http_url_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Url Template"
+        },
+        "interval_ms": {
+          "default": 1000,
+          "title": "Interval Ms",
+          "type": "integer"
+        }
+      },
+      "title": "PreviewDataConfig",
       "type": "object"
     },
     "PreviewMqttConfig": {
