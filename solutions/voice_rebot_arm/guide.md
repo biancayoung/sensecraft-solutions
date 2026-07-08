@@ -28,6 +28,14 @@ Deploy a voice-controlled grasping arm: say **"Hey Jarvis, grab the water bottle
 
 One compose file starts four services — `rebot-arm` (the agent), `seeed-voice` (ASR/TTS), `edge-llm` (Qwen3-4B TensorRT) and `warehouse` (MCP inventory) — plus a one-shot `model-init` that downloads the grasp detector into `/opt/rebot-models/`.
 
+### Target {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
+
+Deploy to a Jetson over SSH. Enter the Jetson IP address and SSH credentials, then set the arm serial device, audio user id and HuggingFace endpoint below.
+
+### Target {#rebot_stack_local type=local device=jetson device_name="Jetson (Local)" config=devices/rebot_stack.yaml}
+
+Deploy directly on the current machine. Use this only when the app or CLI is running on the Jetson itself.
+
 Fill in:
 - **Arm Serial Device** — from the checklist (default `/dev/ttyACM0`)
 - **Host Audio User ID** — the `id -u` result (default `1000`)
@@ -37,7 +45,7 @@ First boot takes several minutes: the LLM engine (~2 GB) downloads and warms up.
 
 ## Step 2: Open the Dashboard {#verify_dashboard type=web_dashboard verify=true required=true config=devices/verify_dashboard.yaml}
 
-The dashboard (`http://<jetson>:8776`) shows the **live wrist-camera image**, the depth view and the **arm state**. Camera frame refreshing = perception is up; state JSON present = the serial link is up.
+Enter the same Jetson IP address used in Step 1 for remote deployment, or `localhost` for local deployment. The dashboard (`http://<jetson>:8776`) shows the **live wrist-camera image**, the depth view and the **arm state**. Camera frame refreshing = perception is up; state JSON present = the serial link is up.
 
 Then the end-to-end voice test — say near the mic:
 

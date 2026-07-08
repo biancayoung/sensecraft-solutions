@@ -2,6 +2,7 @@ version: "1.0"
 id: rebot_stack
 name: Voice Grasping Stack
 type: docker_deploy
+device_class: jetson
 
 # Single source-of-truth device YAML (docker_local / docker_remote views are
 # derived). Deploys the FULL 4-service stack via one compose file:
@@ -26,7 +27,6 @@ detection:
 
 docker:
   compose_file: assets/docker/docker-compose.yml
-  remote_path: /home/{{username}}/voice-rebot-arm
   environment:
     HF_ENDPOINT: "{{hf_endpoint}}"
     REBOT_SERIAL: "{{rebot_serial}}"
@@ -93,11 +93,85 @@ name_i18n:
   zh: 语音抓取全栈
 
 remote_overrides:
+  remote_path: /home/{{username}}/voice-rebot-arm
   # Opt OUT of whole-directory upload: every volume in the compose file is an
   # absolute system path (/dev, /usr/local/cuda, /opt/rebot-models, ...) or a
   # named volume; nothing under assets/docker/ is needed at runtime beyond
   # the compose file itself.
   compose_dir: ""
+  user_inputs:
+    - id: host
+      name: Jetson IP Address
+      type: text
+      required: true
+      placeholder: "192.168.1.100"
+      description: IP address or hostname of the Jetson Orin NX target.
+      name_i18n:
+        zh: Jetson IP 地址
+      description_i18n:
+        zh: Jetson Orin NX 目标设备的 IP 地址或主机名。
+    - id: port
+      name: SSH Port
+      type: text
+      default: "22"
+      required: false
+      description: SSH port, default 22.
+      name_i18n:
+        zh: SSH 端口
+      description_i18n:
+        zh: SSH 端口，默认 22。
+    - id: username
+      name: SSH Username
+      type: text
+      default: seeed
+      required: true
+      description: SSH login username on the Jetson.
+      name_i18n:
+        zh: SSH 用户名
+      description_i18n:
+        zh: Jetson 上的 SSH 登录用户名。
+    - id: password
+      name: SSH Password
+      type: password
+      required: true
+      description: SSH login password for the Jetson.
+      name_i18n:
+        zh: SSH 密码
+      description_i18n:
+        zh: Jetson 的 SSH 登录密码。
+    - id: hf_endpoint
+      name: HuggingFace Endpoint
+      type: text
+      required: false
+      reconfigurable: true
+      default: "https://huggingface.co"
+      description: "Model download endpoint. On China networks use https://hf-mirror.com (the LLM engine, speech models and grasp detector all download from here on first boot)."
+      description_i18n:
+        zh: 模型下载端点。中国大陆网络请填 https://hf-mirror.com（LLM 引擎、语音模型、抓取检测模型首次启动都从这里下载）
+      name_i18n:
+        zh: HuggingFace 端点
+    - id: rebot_serial
+      name: Arm Serial Device
+      type: text
+      required: false
+      reconfigurable: true
+      default: "/dev/ttyACM0"
+      description: "Serial device of the reBot B601-DM arm on the Jetson (ls /dev/ttyACM* with the arm powered on)."
+      description_i18n:
+        zh: reBot B601-DM 机械臂在 Jetson 上的串口设备（臂上电后 ls /dev/ttyACM* 查看）
+      name_i18n:
+        zh: 机械臂串口
+    - id: pulse_uid
+      name: Host Audio User ID
+      type: text
+      required: false
+      reconfigurable: true
+      default: "1000"
+      description: "Numeric uid of the Jetson desktop user that owns PulseAudio (run: id -u). Default 1000 fits a standard single-user JetPack install."
+      description_i18n:
+        zh: Jetson 桌面用户的数字 uid（运行 id -u 查看），PulseAudio 属于该用户。标准单用户 JetPack 系统默认为 1000
+      name_i18n:
+        zh: 音频用户 ID
   detection:
     method: network_scan
     manual_entry: true

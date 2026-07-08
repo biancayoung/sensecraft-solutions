@@ -28,6 +28,14 @@
 
 一个 compose 文件启动四个服务 —— `rebot-arm`（agent）、`seeed-voice`（ASR/TTS）、`edge-llm`（Qwen3-4B TensorRT）、`warehouse`（MCP 库存）—— 外加一次性的 `model-init`，把抓取检测模型下载到 `/opt/rebot-models/`。
 
+### 目标 {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
+
+通过 SSH 部署到 Jetson。填写 Jetson IP 和 SSH 凭据，然后继续配置机械臂串口、音频用户 ID 和 HuggingFace 端点。
+
+### 目标 {#rebot_stack_local type=local device=jetson device_name="Jetson（本机）" config=devices/rebot_stack.yaml}
+
+直接部署到当前机器。只有当 app 或 CLI 就运行在 Jetson 本机上时才使用这个目标。
+
 需要填写：
 - **机械臂串口** —— 见硬件清单（默认 `/dev/ttyACM0`）
 - **音频用户 ID** —— `id -u` 的结果（默认 `1000`）
@@ -37,7 +45,7 @@
 
 ## 步骤 2: 打开面板 {#verify_dashboard type=web_dashboard verify=true required=true config=devices/verify_dashboard.yaml}
 
-面板（`http://<jetson>:8776`）显示**腕部相机实时画面**、深度图和**机械臂状态**。相机画面在刷新 = 感知链路正常；状态 JSON 有值 = 串口链路正常。
+远端部署时填写 Step 1 使用的同一个 Jetson IP；本机部署时填写 `localhost`。面板（`http://<jetson>:8776`）显示**腕部相机实时画面**、深度图和**机械臂状态**。相机画面在刷新 = 感知链路正常；状态 JSON 有值 = 串口链路正常。
 
 然后做端到端语音测试，对麦克风说：
 
