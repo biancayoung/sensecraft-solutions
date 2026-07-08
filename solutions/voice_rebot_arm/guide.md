@@ -26,6 +26,10 @@ Deploy a voice-controlled grasping arm: say **"Hey Jarvis, grab the water bottle
 
 ## Step 1: Deploy the Stack {#rebot_stack type=docker_deploy required=true config=devices/rebot_stack.yaml}
 
+Deploy the voice, LLM, arm-control and inventory services to the Jetson.
+
+### Services
+
 One compose file starts four services — `rebot-arm` (the agent), `seeed-voice` (ASR/TTS), `edge-llm` (Qwen3-4B TensorRT) and `warehouse` (MCP inventory) — plus a one-shot `model-init` that downloads the grasp detector into `/opt/rebot-models/`.
 
 ### Target {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
@@ -45,7 +49,14 @@ First boot takes several minutes: the LLM engine (~2 GB) downloads and warms up.
 
 ## Step 2: Open the Dashboard {#verify_dashboard type=web_dashboard verify=true required=true config=devices/verify_dashboard.yaml}
 
-Enter the same Jetson IP address used in Step 1 for remote deployment, or `localhost` for local deployment. The dashboard (`http://<jetson>:8776`) shows the **live wrist-camera image**, the depth view and the **arm state**. Camera frame refreshing = perception is up; state JSON present = the serial link is up.
+Open the dashboard and confirm the camera feed and arm state are healthy.
+
+### What to check
+
+Enter the same Jetson IP address used in Step 1 for remote deployment, or `localhost` for local deployment. The dashboard URL is `http://<jetson>:8776`.
+
+- Camera frames are refreshing: perception is up
+- State JSON is present: the serial link is up
 
 Then the end-to-end voice test — say near the mic:
 
@@ -62,6 +73,10 @@ The arm waves and the speaker confirms. Voice + LLM + arm control all work now. 
 | `edge-llm` unhealthy for long | Engine still downloading/warming — normal on first boot |
 
 ## Step 3: Hand-Eye Calibration — unlocks grasping {#handeye type=manual required=false}
+
+Finish hand-eye calibration before using grasp commands.
+
+### Why calibration is needed
 
 Grasping converts camera pixels into arm coordinates through a transform that is physically unique to your unit (how the camera sits on the wrist). Until `/opt/rebot-models/hand_eye.npz` exists, grasp commands detect objects but decline to move the arm. One-time, ~30 minutes:
 

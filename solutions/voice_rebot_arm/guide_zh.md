@@ -26,6 +26,10 @@
 
 ## 步骤 1: 部署整套服务 {#rebot_stack type=docker_deploy required=true config=devices/rebot_stack.yaml}
 
+把语音、LLM、臂控和库存服务一次部署到 Jetson。
+
+### 服务内容
+
 一个 compose 文件启动四个服务 —— `rebot-arm`（agent）、`seeed-voice`（ASR/TTS）、`edge-llm`（Qwen3-4B TensorRT）、`warehouse`（MCP 库存）—— 外加一次性的 `model-init`，把抓取检测模型下载到 `/opt/rebot-models/`。
 
 ### 部署目标 {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
@@ -45,7 +49,14 @@
 
 ## 步骤 2: 打开面板 {#verify_dashboard type=web_dashboard verify=true required=true config=devices/verify_dashboard.yaml}
 
-远端部署时填写 Step 1 使用的同一个 Jetson IP；本机部署时填写 `localhost`。面板（`http://<jetson>:8776`）显示**腕部相机实时画面**、深度图和**机械臂状态**。相机画面在刷新 = 感知链路正常；状态 JSON 有值 = 串口链路正常。
+打开面板，确认相机画面和机械臂状态正常。
+
+### 检查内容
+
+远端部署时填写 Step 1 使用的同一个 Jetson IP；本机部署时填写 `localhost`。面板地址是 `http://<jetson>:8776`。
+
+- 相机画面在刷新：感知链路正常
+- 状态 JSON 有值：串口链路正常
 
 然后做端到端语音测试，对麦克风说：
 
@@ -62,6 +73,10 @@
 | `edge-llm` 长时间 unhealthy | 引擎还在下载/预热 —— 首次启动属正常 |
 
 ## 步骤 3: 手眼标定 —— 解锁抓取 {#handeye type=manual required=false}
+
+完成手眼标定后，抓取指令才会真正驱动机械臂。
+
+### 为什么需要标定
 
 抓取要把相机像素换算成机械臂坐标，这个变换与相机在手腕上的安装位置有关，每台设备物理上都不同。在 `/opt/rebot-models/hand_eye.npz` 生成之前，抓取指令能检测到物体但不会动臂。一次性，约 30 分钟：
 

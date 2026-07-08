@@ -57,7 +57,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch
 
 1. **先用通用兜底**：服务暴露 HTTP API 但不是 chat/vision → 用 `http_debug`（任意请求/响应）；只是要打开个页面 → `web_dashboard`（任意 URL）。这俩能覆盖绝大多数「没有专门类型」的情况。
    - 如果结果本身是 RTSP / MJPEG / HLS 视频流，优先用 `video_stream`，不要写成“打开 ffplay/VLC 手动验证”。能在 app 里看到的结果就应在 app 里预览。
-   - 如果一个视频方案同时暴露“最新结果 API”（例如二维码识别文本、检测 JSON），不要为了 curl 再单独加一个 `http_debug` 验证步骤；优先用 `video_stream` 的 overlay，在预览窗口里直接叠加结果。HTTP 最新结果可配置为 `data.http_url_template`，配合 `overlay.script_file` 渲染。只有当 API 返回本身是用户要看的主要结果、且没有可视化预览时，才用 `http_debug`。
+   - 如果一个视频方案同时暴露“最新结果 API”（例如二维码识别文本、检测 JSON），不要为了 curl 再单独加一个 `http_debug` 验证步骤；优先用 `video_stream` 的 overlay，在预览窗口里直接叠加结果。原理是：`video.*_url_template` 提供视频流，`data.http_url_template` 轮询最新 JSON（app 通过 `/api/commands/http-proxy` 代理，避免浏览器 CORS），`overlay.script_file` 是前端 canvas renderer，签名为 `(ctx, data, canvas, img)`，每次数据更新时把二维码文本、检测框或状态卡画到视频上。MQTT 输出则用 `mqtt.*` 触发同一个 renderer。只有当 API 返回本身是用户要看的主要结果、且没有可视化预览时，才用 `http_debug`。
 2. **自定义校验 / 健康检查**：在 device YAML 的 `actions.before` / `actions.after` 写 `run:` 脚本（设备上跑任意 shell，可 `sudo: true`）—— 做部署前预检、部署后健康检查。参考 `solutions/gpt_oss_20b/devices/jetson_deploy.yaml` 的 "Validate Jetson runtime"。**这是不改引擎就能拓展的主力。** 字段名（`actions` / `before` / `after` / `run` / `sudo`）以 `spec/device.schema.json` 为准。
 3. **标记任意步**：`{#id type=... verify=true}` 把任意步骤当成 verify 步。
 4. **以上都不满足**（需要一个全新的交互式 verify 类型 / 新 UI 控件）：这是**引擎（闭源）侧能力**，本仓库加不了 —— 要么用插件原型化（见 `docs/plugin-development.md`），要么提一个[能力需求 issue](https://github.com/suharvest/sensecraft-solutions/issues/new?template=new-capability-request.md)说明你要的交互形态。
@@ -227,6 +227,10 @@ One-line description.
 |-------|----------|
 | Docker not found | Install Docker Desktop |
 ```
+
+> **Step 摘要不要太长**：
+>
+> `## Step ...` 后、首个 `###` 子标题前的正文会显示在折叠步骤卡片上。这里只写 1 句“用户现在做什么 / 看到什么算成功”，不要塞 URL、参数解释、排障判据、命令或长背景。详细检查项放到 `### What to check` / `### 检查内容`，排障放到 `### Troubleshooting` / `### 故障排查`。目标长度：中文不超过 60 字，英文不超过 120 个字符。
 
 > **Target 命名规范**：
 >
