@@ -244,6 +244,28 @@ One-line description.
 > - 本地部署 ID 可叫 `local` 或加前缀（`backend_local`）
 > - 远程部署 ID 用具体设备/服务名（如 `rk3576`），不要笼统叫 `remote`
 
+> **多语言 guide 语法与可见文案（必须检查）**：
+>
+> 结构关键字既是语法也是可见标题，必须匹配文件语言：`guide.md` 用
+> `## Preset:` / `## Step N:` / `### Target` / `### Troubleshooting`；
+> `guide_zh.md` 用 `## 套餐:` / `## 步骤 N:` / `### 部署目标` /
+> `### 故障排查`。不要写半翻译形式，例如 `### 目标 {...}`（解析不了）
+> 或在中文文件里保留 `### Troubleshooting`、`| Symptom | Cause / fix |`。
+>
+> 中文文件的正文、表头、故障现象、按钮说明必须中文优先。允许保留的英文只限：
+> 产品/品牌名、命令、环境变量、文件路径、URL、API 名、模型名，以及设备实际播报
+> 或用户必须说出的英文短句。即使保留英文短句，也要先给中文解释，例如
+> `播报物体太大、夹不住（英文提示类似 "too big for me to grip"）`。
+>
+> 交付前至少运行一次：
+>
+> ```bash
+> rg -n "Troubleshooting|Symptom|Cause / fix|Issue \\| Solution|What you'll get|Requirements|Prerequisites|Wiring|Deployment Complete" solutions/<id>/*_zh.md
+> uv run --package sensecraft-solutionctl solutionctl deploy-info <id> --lang zh
+> ```
+>
+> 第一条只应命中允许保留的英文命令/产品名；第二条要人眼检查中文部署页没有英文模板表头、没有原始 `{#...}` 标记泄漏。
+
 > **多个 docker_deploy 步部署到同一台机器** —— 用 `target_inherit_from=<upstream_step_id>` 让下游步自动跟随上游的 local/remote 选择。只继承 method（local/remote），不绑死 target id。同一 preset 内才能继承；引用的 step 必须在自己之前、且自己有 targets。
 
 > **verify 步要复用上游 deploy 的 host** —— 在 verify 步的 device YAML 里写 `inherit_host_from: <step_id>` 显式声明（`inherit_host_from` 是 device schema 顶层字段，见 CONTRACT）。

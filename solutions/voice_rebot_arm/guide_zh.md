@@ -28,11 +28,11 @@
 
 一个 compose 文件启动四个服务 —— `rebot-arm`（agent）、`seeed-voice`（ASR/TTS）、`edge-llm`（Qwen3-4B TensorRT）、`warehouse`（MCP 库存）—— 外加一次性的 `model-init`，把抓取检测模型下载到 `/opt/rebot-models/`。
 
-### Target {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
+### 部署目标 {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
 
 通过 SSH 部署到 Jetson。填写 Jetson IP 和 SSH 凭据，然后继续配置机械臂串口、音频用户 ID 和 HuggingFace 端点。
 
-### Target {#rebot_stack_local type=local device=jetson device_name="Jetson（本机）" config=devices/rebot_stack.yaml}
+### 部署目标 {#rebot_stack_local type=local device=jetson device_name="Jetson（本机）" config=devices/rebot_stack.yaml}
 
 直接部署到当前机器。只有当 app 或 CLI 就运行在 Jetson 本机上时才使用这个目标。
 
@@ -84,8 +84,8 @@
 
 | 现象 | 原因 / 处理 |
 |---|---|
-| 偶尔说 "I couldn't find the …" | 某些角度下检测置信度偏低 —— 重复指令；把物体往中间挪 |
-| 播报 "too big for me to grip" | 所有可见面都超过 0.088 m 开口 —— 属预期行为，换小物体或把窄面转向机械臂 |
+| 偶尔提示找不到目标 | 某些角度下检测置信度偏低 —— 重复指令；把物体往中间挪。英文播报可能是 "I couldn't find the ..." |
+| 播报物体太大、夹不住 | 所有可见面都超过 0.088 m 开口 —— 属预期行为，换小物体或把窄面转向机械臂。英文播报可能是 "too big for me to grip" |
 | 第一次失败，重试就好 | 已知的扫描位姿 IK 抖动 —— 重试即可 |
 | 抓取偏差几厘米 | 重新标定 —— 并重新实测打印标记边长（见上面第 1 条） |
 | 机械臂关节报错（`status_code=12`） | 给机械臂断电重启（只切扭矩无效） |

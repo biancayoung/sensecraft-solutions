@@ -833,6 +833,69 @@ class TestGuideHeadingLanguageMatchesFile:
         assert not forbidden.match("Two-step deploy 部署")
 
 
+class TestChineseMarkdownNoEnglishTemplates:
+    """Chinese markdown files should not ship copied EN template headings/tables."""
+
+    _FENCE_PATTERN = re.compile(r"```[^\n]*\n.*?\n```", re.DOTALL)
+    _BAD_PATTERNS = [
+        (
+            re.compile(
+                r"(?m)^###\s+(?:Troubleshooting|If something is off|Wiring|"
+                r"Prerequisites|Deployment Complete)\s*$",
+                re.IGNORECASE,
+            ),
+            "English H3 template heading",
+        ),
+        (
+            re.compile(r"(?m)^\|\s*(?:Symptom|Issue)\s*\|\s*(?:Cause\s*/\s*fix|Solution)\s*\|"),
+            "English troubleshooting table header",
+        ),
+        (
+            re.compile(
+                r"(?m)^\*\*(?:What you'll get|Before you start|Requirements)\s*[:：]\*\*",
+                re.IGNORECASE,
+            ),
+            "English bold template heading",
+        ),
+    ]
+
+    def test_zh_markdown_has_no_untranslated_template_fragments(self):
+        root = Path(__file__).resolve().parents[1] / "solutions"
+        zh_files = sorted(root.glob("*/*_zh.md"))
+        offenders = []
+        for path in zh_files:
+            content = path.read_text(encoding="utf-8")
+            stripped = self._FENCE_PATTERN.sub("", content)
+            for pattern, desc in self._BAD_PATTERNS:
+                for m in pattern.finditer(stripped):
+                    line = stripped[: m.start()].count("\n") + 1
+                    rel = path.relative_to(root)
+                    offenders.append(f"{rel}:L{line}: {desc}: {m.group(0)}")
+
+        assert not offenders, (
+            "Chinese markdown contains untranslated English template fragments. "
+            "Translate visible headings/table labels; keep English only for "
+            "product names, commands, paths, URLs, APIs, model names, or quoted "
+            "phrases users/devices actually say.\n  "
+            + "\n  ".join(offenders)
+        )
+
+    def test_lint_catches_english_troubleshooting_table_in_zh(self):
+        sample = (
+            "### 故障排查\n\n"
+            "| Symptom | Cause / fix |\n"
+            "|---|---|\n"
+            "| bad | fix |\n"
+        )
+        stripped = self._FENCE_PATTERN.sub("", sample)
+        offenders = [
+            desc
+            for pattern, desc in self._BAD_PATTERNS
+            if pattern.search(stripped)
+        ]
+        assert offenders == ["English troubleshooting table header"]
+
+
 class TestTargetHeadingDeclaresType:
     """Every `### Target {...}` / `### 部署目标 {...}` heading must declare
     `type=local` or `type=remote` in its attribute block.
