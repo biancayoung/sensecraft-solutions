@@ -1,0 +1,77 @@
+version: "1.0"
+id: recamera
+name: reCamera QR Code Recognition Binary
+name_i18n:
+  zh: reCamera 二维码识别可执行文件
+type: recamera_cpp
+device_class: recamera
+
+ssh:
+  port: 22
+  default_user: recamera
+  default_host: 192.168.42.1
+  connection_timeout: 30
+  command_timeout: 300
+
+binary:
+  service_name: qrcode_rec
+  description: Prebuilt QR code recognition executable for reCamera.
+  auto_start: false
+  conflict_services:
+    stop:
+      - S03node-red
+      - S91sscma-node
+      - S93sscma-supervisor
+
+actions:
+  before:
+    - name: Stop default camera services
+      name_i18n:
+        zh: 停止默认摄像头服务
+      run: |
+        /etc/init.d/S03node-red stop || true
+        /etc/init.d/S91sscma-node stop || true
+        /etc/init.d/S93sscma-supervisor stop || true
+      sudo: true
+      timeout: 60
+  after:
+    - name: Make executable
+      name_i18n:
+        zh: 添加可执行权限
+      run: chmod +x /home/recamera/qrcode_rec
+      timeout: 30
+    - name: Start QR code recognition
+      name_i18n:
+        zh: 启动二维码识别程序
+      run: nohup sudo /home/recamera/qrcode_rec >/tmp/qrcode_rec.log 2>&1 &
+      timeout: 30
+
+files:
+  - url: https://sensecraft-statics.seeed.cc/solution-app/recamera_qrcode_rec/qrcode_rec-bed92aba
+    remote_path: /home/recamera/qrcode_rec
+    sudo: false
+
+user_inputs:
+  - id: host
+    name: reCamera IP Address
+    name_i18n:
+      zh: reCamera IP 地址
+    type: text
+    default: "192.168.42.1"
+    placeholder: "192.168.42.1"
+    description: IP address of your reCamera. USB default is 192.168.42.1.
+    description_i18n:
+      zh: reCamera 的 IP 地址。USB 默认地址为 192.168.42.1。
+    required: true
+    validation:
+      pattern: '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+  - id: password
+    name: SSH Password
+    name_i18n:
+      zh: SSH 密码
+    type: password
+    default: "recamera"
+    description: SSH password. Try recamera or recamera.2.
+    description_i18n:
+      zh: SSH 密码。可以尝试 recamera 或 recamera.2。
+    required: true

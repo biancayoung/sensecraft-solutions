@@ -1,0 +1,23 @@
+id: recamera_2002
+name: reCamera 2002 Series
+type: recamera
+arch: riscv64
+soc: SG2002
+os: reCamera OS
+
+supported_sku:
+  - "102991897"
+  - "100029708"
+  - "108990120"
+
+required_permissions:
+  - root camera access
+
+required_services_to_stop:
+  - S03node-red
+  - S91sscma-node
+  - S93sscma-supervisor
+
+network:
+  rtsp_port: 8554
+  http_port: 8080
