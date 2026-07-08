@@ -29,6 +29,7 @@ actions:
       name_i18n:
         zh: 停止默认摄像头服务
       run: |
+        set -e
         /etc/init.d/S03node-red stop || true
         /etc/init.d/S91sscma-node stop || true
         /etc/init.d/S93sscma-supervisor stop || true
