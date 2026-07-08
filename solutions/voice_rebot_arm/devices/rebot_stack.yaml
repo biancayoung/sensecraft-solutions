@@ -1,0 +1,106 @@
+version: "1.0"
+id: rebot_stack
+name: Voice Grasping Stack
+type: docker_deploy
+
+# Single source-of-truth device YAML (docker_local / docker_remote views are
+# derived). Deploys the FULL 4-service stack via one compose file:
+#   edge-llm (Qwen3-4B TensorRT) + seeed-voice (ASR/TTS) + warehouse (MCP)
+#   + rebot-arm (voice_rebot_arm agent: detection → grasp pipeline)
+# plus a one-shot model-init service that downloads the multi-class detector
+# ONNX from HuggingFace into /opt/rebot-models on first boot.
+#
+# Target: reComputer J4012 (Jetson Orin NX 16GB, JetPack 6). The compose
+# mounts host CUDA/TensorRT libraries — other hosts are unsupported.
+#
+# NOTE the one step one-click cannot do: hand-eye calibration. The arm grasps
+# only after /opt/rebot-models/hand_eye.npz exists for THIS unit (printed
+# ArUco board, one-time, ~30 min — see the guide). Voice chat, detection and
+# the dashboard all work before calibration; only grasping needs it.
+
+detection:
+  method: local
+  requirements:
+    - docker_installed
+    - docker_running
+
+docker:
+  compose_file: assets/docker/docker-compose.yml
+  remote_path: /home/{{username}}/voice-rebot-arm
+  environment:
+    HF_ENDPOINT: "{{hf_endpoint}}"
+    REBOT_SERIAL: "{{rebot_serial}}"
+    PULSE_UID: "{{pulse_uid}}"
+  options:
+    project_name: voice-rebot-arm
+    remove_orphans: true
+  services:
+    - name: rebot-arm
+      port: 8776
+      health_check_endpoint: "/api/state"
+      required: true
+    - name: edge-llm
+      port: 8000
+      required: true
+    - name: seeed-voice
+      port: 8621
+      required: true
+    - name: warehouse
+      port: 2125
+      health_check_endpoint: "/healthz"
+      required: true
+
+ssh:
+  port: 22
+  default_user: seeed
+
+user_inputs:
+  - id: hf_endpoint
+    name: HuggingFace Endpoint
+    type: text
+    required: false
+    reconfigurable: true
+    default: "https://huggingface.co"
+    description: "Model download endpoint. On China networks use https://hf-mirror.com (the LLM engine, speech models and grasp detector all download from here on first boot)."
+    description_i18n:
+      zh: 模型下载端点。中国大陆网络请填 https://hf-mirror.com（LLM 引擎、语音模型、抓取检测模型首次启动都从这里下载）
+    name_i18n:
+      zh: HuggingFace 端点
+  - id: rebot_serial
+    name: Arm Serial Device
+    type: text
+    required: false
+    reconfigurable: true
+    default: "/dev/ttyACM0"
+    description: "Serial device of the reBot B601-DM arm on the Jetson (ls /dev/ttyACM* with the arm powered on)."
+    description_i18n:
+      zh: reBot B601-DM 机械臂在 Jetson 上的串口设备（臂上电后 ls /dev/ttyACM* 查看）
+    name_i18n:
+      zh: 机械臂串口
+  - id: pulse_uid
+    name: Host Audio User ID
+    type: text
+    required: false
+    reconfigurable: true
+    default: "1000"
+    description: "Numeric uid of the Jetson desktop user that owns PulseAudio (run: id -u). Default 1000 fits a standard single-user JetPack install."
+    description_i18n:
+      zh: Jetson 桌面用户的数字 uid（运行 id -u 查看），PulseAudio 属于该用户。标准单用户 JetPack 系统默认为 1000
+    name_i18n:
+      zh: 音频用户 ID
+
+name_i18n:
+  zh: 语音抓取全栈
+
+remote_overrides:
+  # Opt OUT of whole-directory upload: every volume in the compose file is an
+  # absolute system path (/dev, /usr/local/cuda, /opt/rebot-models, ...) or a
+  # named volume; nothing under assets/docker/ is needed at runtime beyond
+  # the compose file itself.
+  compose_dir: ""
+  detection:
+    method: network_scan
+    manual_entry: true
+    requirements:
+      - docker_installed
+      - docker_running
