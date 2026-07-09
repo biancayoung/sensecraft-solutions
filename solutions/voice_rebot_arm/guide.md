@@ -32,6 +32,14 @@ Deploy the voice, LLM, arm-control and inventory services to the Jetson.
 
 One compose file starts four services — `rebot-arm` (the agent), `seeed-voice` (ASR/TTS), `edge-llm` (Qwen3-4B TensorRT) and `warehouse` (MCP inventory) — plus a one-shot `model-init` that downloads the grasp detector into `/opt/rebot-models/`.
 
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| SSH connection fails | Check the Jetson IP address, SSH username/password and that port `22` is reachable. |
+| Arm serial device is missing | Confirm `ls /dev/ttyACM*` on the Jetson and update the Arm Serial Device field. |
+| `edge-llm` stays unhealthy on first boot | The TensorRT engine is still downloading or warming up; watch `docker logs edge-llm`. |
+
 ### Target {#rebot_stack_remote type=remote device=jetson device_name="Jetson" config=devices/rebot_stack.yaml default=true}
 
 Deploy to a Jetson over SSH. Enter the Jetson IP address and SSH credentials, then set the arm serial device, audio user id and HuggingFace endpoint below.
@@ -49,9 +57,9 @@ First boot takes several minutes: the LLM engine (~2 GB) downloads and warms up.
 
 ## Step 2: Open the Dashboard {#verify_dashboard type=web_dashboard verify=true required=true config=devices/verify_dashboard.yaml}
 
-Open the dashboard and confirm the camera feed and arm state are healthy.
+Open the dashboard and confirm the live camera feed, arm state and voice path are healthy.
 
-### What to check
+### Deployment Complete
 
 Enter the same Jetson IP address used in Step 1 for remote deployment, or `localhost` for local deployment. The dashboard URL is `http://<jetson>:8776`.
 
@@ -64,7 +72,7 @@ Then the end-to-end voice test — say near the mic:
 
 The arm waves and the speaker confirms. Voice + LLM + arm control all work now. Grasping needs one more step: calibration.
 
-### If something is off
+### Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
@@ -74,9 +82,9 @@ The arm waves and the speaker confirms. Voice + LLM + arm control all work now. 
 
 ## Step 3: Hand-Eye Calibration — unlocks grasping {#handeye type=manual required=false}
 
-Finish hand-eye calibration before using grasp commands.
+Finish one-time hand-eye calibration before using grasp commands.
 
-### Why calibration is needed
+### Prerequisites
 
 Grasping converts camera pixels into arm coordinates through a transform that is physically unique to your unit (how the camera sits on the wrist). Until `/opt/rebot-models/hand_eye.npz` exists, grasp commands detect objects but decline to move the arm. One-time, ~30 minutes:
 
