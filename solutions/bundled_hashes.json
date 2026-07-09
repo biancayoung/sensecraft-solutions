@@ -17,7 +17,7 @@
   "smart_retail_voice_ai": "sha256:48a52f8869dbf674fce29a4e9e9748085633dc68e7f6af92ffe83894ab705226",
   "smart_space_assistant": "sha256:a92a913cb4e21f89c8433097f7da08562a4b6f7603719f26d6a1a5f3c2407fd7",
   "smart_warehouse": "sha256:cfdb254b472dfc8ab80993c7deaf11b698684c23ce72eb6657f0724626a7edac",
-  "voice_rebot_arm": "sha256:eba0686adf7323f9b07a2020cfcdde63b209e5cc13eae07d8a4928010a95c866",
+  "voice_rebot_arm": "sha256:a8973194826a1f78b86edcbff2bb64b189785132d9019915edb1ba09729524f2",
   "voice_robot_lekiwi": "sha256:8f9733abb95b5d6f09614e572e06a44e690c3c1413682ce320fc5883dd6f621b",
   "z_image_turbo": "sha256:bac506205707ea82eb51f539b399dbd4b49f7729e45039f005189ac8993044cd"
 }
