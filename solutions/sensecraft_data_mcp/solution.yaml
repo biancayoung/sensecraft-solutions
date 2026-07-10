@@ -2,9 +2,9 @@ version: '1.0'
 id: sensecraft_data_mcp
 name: SenseCAP PaaS MCP Bridge
 intro:
-  summary: Give any MCP-compatible voice assistant or LLM live access to your SenseCAP PaaS device data — register devices, read telemetry, and pull Arduino code templates by just asking.
+  summary: Give any MCP-compatible voice assistant or LLM a spoken, anomaly-first report on your SenseCAP PaaS device fleet — ask "how are my devices doing" or "what's the greenhouse reading right now" and get a real answer, no app or dashboard needed.
   summary_i18n:
-    zh: 让任意兼容 MCP 的语音助手/LLM 直接访问你的 SenseCAP PaaS 设备数据——注册设备、读取遥测数据、获取 Arduino 代码模板，动口就能做。
+    zh: 让任意兼容 MCP 的语音助手/LLM 直接把你的 SenseCAP PaaS 设备情况念给你听——问一句"我的设备怎么样了"或"大棚现在读数多少"就有答案，不用打开 App，不用看仪表盘。
   description_file: description.md
   description_file_i18n:
     zh: description_zh.md

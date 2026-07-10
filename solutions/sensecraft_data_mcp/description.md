@@ -1,6 +1,6 @@
 ## What This Capability Does
 
-Gives any MCP-compatible voice assistant or LLM a live, spoken-language connection to your SenseCAP PaaS device fleet — register a device, look up its key, or ask "what's my sensor reading right now" without opening an app or writing a query.
+Gives any MCP-compatible voice assistant or LLM a live, spoken-language connection to your SenseCAP PaaS device fleet. Ask "how are my devices doing" and get an anomaly-first fleet report, or ask about one device by name for its full current reading — no app, no dashboard, no query language. Device registration and key lookup are also available for setup workflows.
 
 ## What You Get After Deploying
 
