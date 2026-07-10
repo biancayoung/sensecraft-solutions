@@ -1,6 +1,6 @@
-## Preset: Native Binary Deployment {#default}
+## Preset: Install QR Recognition Service {#default}
 
-Deploy a prebuilt `qrcode_rec` executable to reCamera. Users do not need to compile source code on the device.
+Install the packaged `qrcode-rec` service on reCamera. Users do not need to compile source code on the device.
 
 | Device | Purpose |
 | --- | --- |
@@ -16,11 +16,11 @@ Deploy a prebuilt `qrcode_rec` executable to reCamera. Users do not need to comp
 
 - reCamera 2002 Series
 - SSH access to reCamera
-- Internet access from the machine running deployment, so the prebuilt executable can be downloaded from Seeed solution assets
+- Internet access from the machine running deployment, so the service package can be downloaded from Seeed solution assets
 
-## Step 1: Deploy the binary to reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
+## Step 1: Install the service on reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
 
-Download the prebuilt `qrcode_rec` executable, copy it to reCamera, stop default camera services, grant execute permission, and start the QR recognition program.
+The app installs the `qrcode-rec` service package on reCamera, stops the default camera services, and starts QR recognition.
 
 ### Deployment Complete
 
@@ -40,7 +40,7 @@ Health    : http://<device-ip>:8080/api/health
 | --- | --- |
 | SSH connection failed | Check the IP address, network connection, and SSH password. |
 | Camera resource is busy | Stop Node-RED and sscma-node services, then run the program again. |
-| Program exits immediately | Run `cat /tmp/qrcode_rec.log` on reCamera to inspect the runtime log. |
+| Service fails to start | Run `cat /tmp/qrcode_rec.log` on reCamera to inspect the runtime log. |
 
 ## Step 2: Preview QR recognition {#verify_rtsp type=video_stream required=true config=devices/rtsp_preview.yaml}
 

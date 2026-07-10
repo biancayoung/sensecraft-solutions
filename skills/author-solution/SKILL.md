@@ -207,6 +207,8 @@ device YAML 的字段、各部署类型（`docker_local` / `docker_remote` / `es
 | 手动跑的 shell 命令 | `actions.before` / `actions.after` |
 | 用户需要填的值 | `user_inputs` 列表 |
 
+> **reCamera C++ 应用必须优先做 deb 包**：如果原项目产物是 C/C++ 可执行文件，不要在 solution 里用 `files:` 复制裸二进制，也不要用 `actions.after` 做 `chmod + nohup`。正确做法是使用 `skills/prepare-deb-package` 打包成 `.deb`，在 device YAML 中写 `binary.deb_package.path/name/includes_init_script/checksum`，并提供 `/etc/init.d/S92<service>` 管理启动、停止和卸载。这样切换应用、重复部署、卸载还原才可控。只有一次性诊断脚本或非长期运行文件才考虑 `files:`。
+
 > **`docker_deploy` 派生规则**（一个 device YAML 写成 `type: docker_deploy`，引擎在加载时拆成 `docker_local` + `docker_remote` 两个视图）的完整规则见 `spec/CONTRACT.md`「docker_deploy view 派生规则」。要点：`remote_path` 必填且无 `solution_id` 兜底；`remote_overrides.actions` 是整体替换不是合并。
 
 **Step 10**：编写 guide.md
@@ -477,6 +479,8 @@ uv run --package sensecraft-solutionctl solutionctl validate solutions/<solution
 **人眼自检清单**（工具查不到的）：
 - [ ] 打开 cover_image，画面有真实数据、无空 dashboard、无 loading 状态
 - [ ] 每个 deploy step 都对得上一个 verify step（看 guide.md 步骤列表）
+- [ ] RTSP + HTTP 结果类方案使用 `video_stream` 在 App 内预览并叠加结果，不把预览和 API 查询拆成两步
+- [ ] reCamera C++ 长驻应用使用 `.deb + init script`，不使用裸二进制 `files:` + `chmod/nohup`
 - [ ] `### Wiring` 段确实只放接线说明
 - [ ] description 风格匹配类型（solution: 四段式 / technical: 能力产物 → 集成场景 → 接口详情）
 - [ ] technical 首屏不是端口表或 curl；首段专业缩写不超过 2 个，并有通俗解释

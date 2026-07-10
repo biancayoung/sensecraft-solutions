@@ -1,6 +1,6 @@
-## 套餐: 原生可执行文件部署 {#default}
+## 套餐: 安装二维码识别服务 {#default}
 
-将已经编译好的 `qrcode_rec` 可执行文件部署到 reCamera。用户不需要在设备上编译源码。
+在 reCamera 上安装已经打包好的 `qrcode-rec` 服务。用户不需要在设备上编译源码。
 
 | 设备 | 用途 |
 | --- | --- |
@@ -16,11 +16,11 @@
 
 - reCamera 2002 系列
 - 可以通过 SSH 访问 reCamera
-- 运行部署的电脑可以访问网络，用于从 Seeed solution assets 下载预编译可执行文件
+- 运行部署的电脑可以访问网络，用于从 Seeed solution assets 下载服务包
 
-## 步骤 1: 部署可执行文件到 reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
+## 步骤 1: 安装服务到 reCamera {#deploy_binary type=recamera_cpp required=true config=devices/recamera.yaml}
 
-下载已经编译好的 `qrcode_rec` 可执行文件，将它复制到 reCamera，停止默认摄像头服务，添加可执行权限，并启动二维码识别程序。
+软件会把 `qrcode-rec` 服务包安装到 reCamera，停止默认摄像头服务，并启动二维码识别服务。
 
 ### 部署完成
 
@@ -40,7 +40,7 @@ Health    : http://<device-ip>:8080/api/health
 | --- | --- |
 | SSH 连接失败 | 检查 IP 地址、网络连接和 SSH 密码。 |
 | 摄像头资源被占用 | 停止 Node-RED 和 sscma-node 服务后重新运行。 |
-| 程序立即退出 | 在 reCamera 上运行 `cat /tmp/qrcode_rec.log` 查看日志。 |
+| 服务启动失败 | 在 reCamera 上运行 `cat /tmp/qrcode_rec.log` 查看日志。 |
 
 ## 步骤 2: 预览二维码识别效果 {#verify_rtsp type=video_stream required=true config=devices/rtsp_preview.yaml}
 

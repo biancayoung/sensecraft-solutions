@@ -35,12 +35,12 @@ intro:
         zh: 在本地运行二维码识别的 AI 摄像头
   presets:
     - id: default
-      name: Native Binary Deployment
+      name: Install QR Recognition Service
       name_i18n:
-        zh: 原生可执行文件部署
-      description: Deploy the prebuilt qrcode_rec executable to reCamera.
+        zh: 安装二维码识别服务
+      description: Install the packaged qrcode-rec service on reCamera.
       description_i18n:
-        zh: 将已经编译好的 qrcode_rec 可执行文件部署到 reCamera。
+        zh: 在 reCamera 上安装已经打包好的 qrcode-rec 服务。
       device_groups:
         - id: camera
           name: reCamera

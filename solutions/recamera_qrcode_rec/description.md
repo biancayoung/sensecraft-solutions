@@ -2,7 +2,7 @@
 
 This solution runs QR code recognition directly on reCamera.
 
-The device streams live camera video through RTSP and exposes the latest QR code result through an HTTP API. A PC on the same network can display the RTSP video and poll the HTTP API to show the latest QR content, detection time, and bounding box.
+The device streams live camera video through RTSP and exposes the latest QR code result through an HTTP API. SenseCraft Solution shows the live stream in the preview window and overlays the decoded QR content, detection time, and bounding box directly on the video.
 
 ## Key Features
 
@@ -11,7 +11,7 @@ The device streams live camera video through RTSP and exposes the latest QR code
 - Separate QR detection thread that does not block video streaming
 - Latest-frame queue with length 1 to avoid detection backlog
 - HTTP API for the latest QR result
-- Optional PC viewer for visualization
+- In-app preview with QR recognition overlay
 
 ## Data Links
 
