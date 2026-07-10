@@ -44,6 +44,7 @@ Deploy on the machine you're currently using.
 | Docker not found | Install Docker Desktop and ensure it is running |
 | Container keeps restarting | Check logs: `docker logs sensecraft-data-mcp` — usually a wrong Access ID/Key or endpoint URL |
 | XiaoZhi never calls the tools | Confirm the MCP endpoint URL (including the `?token=` part) was copied exactly from the XiaoZhi console |
+| Reported times are off by several hours | Set the "Device Timezone" field to your devices' IANA timezone (e.g. `Asia/Shanghai`) and redeploy. Left blank, the China site defaults to Beijing time and other sites default to UTC — it never guesses. |
 
 ### Target {#remote type=remote device_name="reComputer R1100" config=devices/mcp_bridge.yaml}
 
@@ -56,3 +57,4 @@ Deploy to a reComputer (or any Docker host) over SSH.
 | SSH connection failed | Verify the device IP, username, and password, and that SSH is enabled |
 | Docker Compose unavailable | Install it: `sudo apt-get install -y docker-compose-plugin` |
 | Container keeps restarting | Check logs on the device: `docker logs sensecraft-data-mcp` — usually a wrong Access ID/Key or endpoint URL |
+| Reported times are off by several hours | Set the "Device Timezone" field to your devices' IANA timezone (e.g. `Asia/Shanghai`) and redeploy. Left blank, the China site defaults to Beijing time and other sites default to UTC — it never guesses. |
