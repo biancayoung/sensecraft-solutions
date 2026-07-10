@@ -44,6 +44,7 @@
 | 找不到 Docker | 安装 Docker Desktop 并确保其正在运行 |
 | 容器反复重启 | 查看日志：`docker logs sensecraft-data-mcp` —— 通常是 Access ID/Key 或接入点地址填错了 |
 | 小智一直不调用工具 | 确认 MCP 接入点地址（包括 `?token=` 部分）是从小智智控台完整复制过来的 |
+| 播报的时间差好几个小时 | 把"设备所在时区"填成设备实际所在的 IANA 时区（如 `Asia/Shanghai`）再重新部署。留空时国内站默认按北京时间处理，其余站点默认按 UTC 处理——不会瞎猜时区 |
 
 ### 部署目标 {#remote type=remote device_name="reComputer R1100" config=devices/mcp_bridge.yaml}
 
@@ -56,3 +57,4 @@
 | SSH 连接失败 | 检查设备 IP、用户名、密码，以及设备是否已开启 SSH |
 | Docker Compose 不可用 | 安装：`sudo apt-get install -y docker-compose-plugin` |
 | 容器反复重启 | 在设备上查看日志：`docker logs sensecraft-data-mcp` —— 通常是 Access ID/Key 或接入点地址填错了 |
+| 播报的时间差好几个小时 | 把"设备所在时区"填成设备实际所在的 IANA 时区（如 `Asia/Shanghai`）再重新部署。留空时国内站默认按北京时间处理，其余站点默认按 UTC 处理——不会瞎猜时区 |

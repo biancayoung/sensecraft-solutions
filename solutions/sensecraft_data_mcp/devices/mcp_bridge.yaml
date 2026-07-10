@@ -25,6 +25,7 @@ docker:
     ACCESS_ID: "{{access_id}}"
     ACCESS_KEY: "{{access_key}}"
     SENSECRAFT_SITE_ENV: "{{site_env}}"
+    SENSECRAFT_TIMEZONE: "{{timezone}}"
     MCP_ENDPOINT: "{{mcp_endpoint}}"
   options:
     project_name: sensecraft_data_mcp
@@ -83,6 +84,17 @@ user_inputs:
       zh: SenseCAP 站点
     description_i18n:
       zh: 要对接的 SenseCAP PaaS 环境
+  - id: timezone
+    name: Device Timezone (optional)
+    type: text
+    required: false
+    default: ""
+    placeholder: "Asia/Shanghai"
+    description: IANA timezone (e.g. Asia/Shanghai) used when speaking device report times back to you. Leave blank to use the China site's default (Asia/Shanghai) or UTC otherwise — it will never guess a timezone it isn't sure about.
+    name_i18n:
+      zh: 设备所在时区（可选）
+    description_i18n:
+      zh: 播报设备上报时间时使用的 IANA 时区（如 Asia/Shanghai）。留空时国内站默认用北京时间，其余站点默认用 UTC——不会猜一个不确定的时区。
   - id: mcp_endpoint
     name: XiaoZhi MCP Endpoint
     type: password

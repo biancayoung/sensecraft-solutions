@@ -7,10 +7,11 @@ Gives any MCP-compatible voice assistant or LLM a live, spoken-language connecti
 - A farm overview tool: ask "how are my devices doing" and get one spoken answer — how many devices, who's offline, whose battery is low, presented anomaly-first so a healthy fleet doesn't waste your time.
 - A device reading tool: ask about one device by name and get every channel's current reading spoken in plain language (temperature, humidity, soil moisture, wind, rainfall, and more), not raw numbers.
 - A device registry tool: register a new SenseCAP device and get back its EUI, by name.
-- A live telemetry tool: ask for the latest reading from any device by name or EUI.
+- A device key lookup tool: get a device's `device_key`/token by name or EUI — used when provisioning firmware.
+- A live telemetry tool: ask for the latest reading from any device by name or EUI — returns the newest data point for every channel it reports, not just one value.
 - A history tool: pull historical telemetry for a time range, plus a chart-ready aggregation tool for plotting trends.
 - A code-template tool: list and read Arduino/PlatformIO templates for reporting sensor data and device status to SenseCAP.
-- All answers come back in a structure a voice assistant can speak directly (a short, ready-to-read sentence alongside the raw data).
+- The farm overview and device reading tools speak a complete, ready-to-hear sentence built from real numbers. The telemetry/history/chart/key tools return a short summary plus the full structured data instead — built for scripting and follow-up processing, not meant to be read aloud verbatim.
 
 ## What You Can Connect It To
 
