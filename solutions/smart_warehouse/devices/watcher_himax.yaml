@@ -17,9 +17,9 @@ detection:
 
 firmware:
   source:
-    path: https://sensecraft-statics.seeed.cc/solution-app/smart_space_assistant/assets/watcher_firmware/face_recognition.img
+    path: https://sensecraft-statics.seeed.cc/solution-app/smart_warehouse/assets/watcher_firmware/face_recognition-8f75fb27.img
     checksum:
-      sha256: 43ca71b81b4e7f83ea0dac6a5283e5a717610aa6943448da5853e1167dba503b
+      sha256: 8f75fb27b3f2c10640a897ebed8795b5909ee37d4805a513859670bf0d362d41
   flash_config:
     baudrate: 921600
     requires_reset: false  # No manual reset needed - ESP32 hold triggers Himax bootloader
@@ -65,7 +65,7 @@ firmware:
       - id: face_detection_2
         name: Face Detection 2 (SCRFD 500M KPS)
         path: https://sensecraft-statics.seeed.cc/solution-app/smart_space_assistant/assets/models/scrfd_500m_kps_int8_vela.tflite
-        flash_address: "0x600000"
+        flash_address: "0x650000"
         offset: "0x0"
         required: true
         default: true
