@@ -1,0 +1,101 @@
+version: "1.0"
+id: gateway
+name: Gateway Bridge (reComputer / Raspberry Pi)
+name_i18n:
+  zh: 网关桥接服务（reComputer / 树莓派）
+type: script
+device_class: linux
+
+ssh:
+  port: 22
+  default_user: recomputer
+  default_host: ""
+  connection_timeout: 30
+  command_timeout: 300
+
+script:
+  setup_commands:
+    - name: Install Python dependencies
+      name_i18n:
+        zh: 安装 Python 依赖
+      command: |
+        pip3 install --user --quiet paho-mqtt meshtastic requests 2>/dev/null || \
+          pip3 install --quiet paho-mqtt meshtastic requests
+      sudo: false
+      timeout: 120
+  start_command:
+    command: |
+      set -e
+      INSTALL_DIR="/opt/sheep-gateway"
+      sudo mkdir -p "$INSTALL_DIR"
+      sudo cp assets/gateway/meshtastic_mqtt_bridge.py "$INSTALL_DIR/"
+      sudo cp assets/gateway/ha_bridge.py "$INSTALL_DIR/"
+      sudo cp assets/gateway/ha_dashboard.yaml "$INSTALL_DIR/"
+      sudo chmod +x "$INSTALL_DIR/meshtastic_mqtt_bridge.py" "$INSTALL_DIR/ha_bridge.py"
+      cat | sudo tee "$INSTALL_DIR/.env" >/dev/null <<EOF
+      HA_HOST={{ha_host}}
+      HA_TOKEN={{ha_token}}
+      MQTT_HOST={{mqtt_host}}
+      SERIAL_PORT=/dev/ttyACM0
+      EOF
+      sudo chmod 600 "$INSTALL_DIR/.env"
+      sudo systemctl daemon-reload || true
+      sudo systemctl enable meshtastic-bridge ha-bridge || true
+      sudo systemctl start meshtastic-bridge || true
+      sudo systemctl start ha-bridge || true
+    sudo: true
+    timeout: 90
+  health_check:
+    type: log_pattern
+    pattern: "active"
+    timeout_seconds: 30
+
+user_inputs:
+  - id: gateway_host
+    name: Gateway IP Address
+    name_i18n:
+      zh: 网关设备 IP 地址
+    type: text
+    placeholder: "192.168.1.50"
+    description: IP address of your reComputer or Raspberry Pi gateway host.
+    description_i18n:
+      zh: reComputer 或树莓派网关主机的 IP 地址。
+    required: true
+    validation:
+      pattern: '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+  - id: ha_host
+    name: Home Assistant IP Address
+    name_i18n:
+      zh: Home Assistant IP 地址
+    type: text
+    placeholder: "192.168.1.100"
+    description: IP address of your Home Assistant server.
+    description_i18n:
+      zh: Home Assistant 服务器的 IP 地址。
+    required: true
+    validation:
+      pattern: '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+  - id: ha_token
+    name: Home Assistant Long-Lived Access Token
+    name_i18n:
+      zh: Home Assistant 长期访问令牌
+    type: password
+    description: Create in HA → Profile → Long-Lived Access Tokens.
+    description_i18n:
+      zh: 在 HA 的「个人资料 → 长期访问令牌」中创建。
+    required: true
+  - id: mqtt_host
+    name: Local MQTT Broker IP
+    name_i18n:
+      zh: 本地 MQTT Broker IP
+    type: text
+    placeholder: "192.168.1.100"
+    description: IP address of your MQTT broker (often same as Home Assistant).
+    description_i18n:
+      zh: MQTT Broker 的 IP 地址（通常与 Home Assistant 在同一主机）。
+    required: true
+    validation:
+      pattern: '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+
+post_deployment:
+  open_browser: false
