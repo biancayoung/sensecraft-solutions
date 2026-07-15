@@ -3,7 +3,7 @@
 # Install on the camera as /etc/init.d/S99sheep-counter (chmod +x) with the binary at $DAEMON.
 # It starts after the sscma inference daemon (S91/S93), so the model is up when we send invoke.
 
-DAEMON=/home/recamera/sheep_counter
+DAEMON=/usr/bin/sheep_counter
 NAME=sheep_counter
 PIDFILE=/var/run/$NAME.pid
 LOGFILE=/var/log/$NAME.log

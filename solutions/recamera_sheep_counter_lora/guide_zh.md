@@ -20,7 +20,7 @@
 
 ## 步骤 1: 将绵羊计数器部署到 reCamera {#deploy_recamera type=recamera_cpp required=true config=devices/recamera.yaml}
 
-将预编译的 YOLO 绵羊计数器二进制文件和启动脚本部署到您的 reCamera。
+将带版本的 YOLO 绵羊计数器软件包及其受管启动服务部署到 reCamera。
 
 ### 接线
 
@@ -35,14 +35,14 @@
 
 部署程序将：
 - 停止默认 Node-RED 和 SSCMA 服务以释放 NPU
-- 上传 `sheep_counter` 二进制文件和启动脚本
-- 将其注册为每次开机自动启动的 init.d 服务
+- 从 SenseCraft CDN 下载并校验带 SHA256 的 `recamera-sheep-counter-lora` 软件包
+- 将计数器和守护程序安装为每次开机自动启动的 init.d 服务
 
 部署完成后，通过 SSH 登录摄像头并查看日志，确认程序正在运行：
 
 ```
 ssh recamera@192.168.42.1
-tail -f /tmp/sheep_counter.log
+tail -f /var/log/sheep_counter.log
 ```
 
 当羊只穿越围栏线时，您应能看到类似 `EVT,IN,1,0,1,123` 的事件出现。
@@ -52,7 +52,7 @@ tail -f /tmp/sheep_counter.log
 | 问题 | 解决方案 |
 |------|---------|
 | SSH 连接失败 | 检查连接线缆；如果密码 `recamera` 无效，请尝试 `recamera.2` |
-| 二进制文件立即退出 | 执行 `chmod +x /home/recamera/sheep_counter` 后重启服务 |
+| 计数器立即退出 | 检查 `/var/log/sheep_counter.log`，然后执行 `/etc/init.d/S85sscma-keepalive restart` |
 | 2 分钟后仍无日志输出 | 确认 SSCMA 推理守护进程正在运行：`/etc/init.d/S85sscma-keepalive start` |
 | XIAO 未收到 UART 事件 | 确认 XIAO 与 reCamera 共用 GND；检查 `/dev/ttyS3` 接线 |
 
@@ -94,7 +94,7 @@ tail -f /tmp/sheep_counter.log
 
 通过自动安装脚本将两个 Python 桥接服务（`meshtastic_mqtt_bridge` 和 `ha_bridge`）部署到本地网关电脑。这些服务监听 LoRa 消息，并通过 MQTT 将羊只计数发布到 Home Assistant。
 
-开始部署前，请确认 Home Assistant 已安装并在本地网络上运行，并在 HA 中创建**长期访问令牌**：个人资料 → 长期访问令牌 → 创建。部署表单中需要填写网关 IP、SSH 凭据、Home Assistant IP/令牌和 MQTT Broker IP。
+开始部署前，请确认 Home Assistant 已在局域网中运行，且 MQTT 集成已连接到同一 Broker 并启用自动发现。部署表单中需要填写网关 SSH 连接、MQTT Broker IP 和 Meshtastic 接收器串口。
 
 ### 接线
 
@@ -120,7 +120,7 @@ systemctl status meshtastic-bridge ha-bridge
 | 问题 | 解决方案 |
 |------|---------|
 | meshtastic-bridge 无法启动 | 确认 Meshtastic USB 无线电已插入网关；检查 `journalctl -u meshtastic-bridge` |
-| ha-bridge 连接失败 | 再次检查 HA 令牌；确认网关可访问 8123 端口 |
+| ha-bridge 连接失败 | 确认 MQTT Broker IP 的 1883 端口可达，且允许网关连接 |
 | 无 MQTT 消息 | 检查 MQTT Broker IP 是否正确，以及 Broker 是否接受 1883 端口的匿名连接 |
 | 重启后服务停止 | 执行 `systemctl enable meshtastic-bridge ha-bridge` 重新启用 |
 
@@ -134,14 +134,14 @@ systemctl status meshtastic-bridge ha-bridge
 
 您的绵羊计数器已上线！看板将显示：
 
-- **进/出/在栏** — 实时计数器，每天午夜自动重置
+- **进/出/在栏** — 自上次在看板重置后的实时计数
 - **最近事件时间** — 最近一次穿越事件的时间戳
 - **当日历史** — 24 小时趋势图
 
 #### 快速验证
 
 1. 在摄像头前挥手（或穿越围栏线）模拟一次穿越
-2. 观察 reCamera 上 `/tmp/sheep_counter.log` 中出现的 `EVT,IN,...` 日志行
+2. 观察 reCamera 上 `/var/log/sheep_counter.log` 中出现的 `EVT,IN,...` 日志行
 3. 约 30 秒内，HA 看板上的"进"计数器应递增
 
 #### 使用技巧
@@ -159,6 +159,6 @@ systemctl status meshtastic-bridge ha-bridge
 
 | 问题 | 解决方案 |
 |------|---------|
-| 看板页面无数据 | 确认 ha-bridge 正在运行，且 HA 已创建 MQTT 传感器实体 |
+| 看板页面无数据 | 确认 ha-bridge 正在运行、HA 已启用 MQTT 自动发现，且 `sensor.sheep_*` 实体已出现 |
 | 计数未更新 | 手动触发一次穿越；通过 `mosquitto_sub -t sheep/# -v` 检查 MQTT 流量 |
 | HA 实体显示"不可用" | 重新导入 `ha_dashboard.yaml` 并重启 ha-bridge 服务 |

@@ -1,8 +1,8 @@
 version: "1.0"
 id: recamera
-name: reCamera — Sheep Counter Binary
+name: reCamera — Sheep Counter Package
 name_i18n:
-  zh: reCamera——绵羊计数器可执行文件
+  zh: reCamera——绵羊计数器软件包
 type: recamera_cpp
 device_class: recamera
 
@@ -14,7 +14,14 @@ ssh:
   command_timeout: 300
 
 binary:
-  service_name: sheep_counter
+  deb_package:
+    path: https://sensecraft-statics.seeed.cc/solution-app/recamera_sheep_counter_lora/recamera-sheep-counter-lora_1.0.0_riscv64-1e45c365.deb
+    name: recamera-sheep-counter-lora
+    includes_init_script: true
+    checksum:
+      sha256: 1e45c365b856f7b2547793c404bd180100f2c2153ab9589a4a4f4f633ec6e885
+  service_name: sscma-keepalive
+  service_priority: 85
   description: YOLO-based sheep gate-crossing counter for reCamera (RISC-V / SG2002 NPU).
   description_i18n:
     zh: 面向 reCamera（RISC-V / SG2002 NPU）的 YOLO 绵羊穿越计数器。
@@ -24,52 +31,10 @@ binary:
       - S03node-red
       - S91sscma-node
       - S93sscma-supervisor
-
-actions:
-  before:
-    - name: Stop stock camera services
-      name_i18n:
-        zh: 停止默认摄像头服务
-      description: Stops Node-RED and SSCMA services that conflict with the counter binary.
-      description_i18n:
-        zh: 停止与计数器二进制文件冲突的 Node-RED 和 SSCMA 服务。
-      run: |
-        set -e
-        /etc/init.d/S03node-red stop || true
-        /etc/init.d/S91sscma-node stop || true
-        /etc/init.d/S93sscma-supervisor stop || true
-      sudo: true
-      timeout: 60
-  after:
-    - name: Install init scripts
-      name_i18n:
-        zh: 安装初始化脚本
-      description: Installs the sscma-keepalive and sheep_counter init.d scripts so counting survives reboots.
-      description_i18n:
-        zh: 安装 sscma-keepalive 和 sheep_counter 的 init.d 脚本，确保计数在重启后自动恢复。
-      run: |
-        set -e
-        chmod +x /home/recamera/sheep_counter /home/recamera/sscma-keepalive.sh
-        install -m755 /home/recamera/S85sscma-keepalive /etc/init.d/S85sscma-keepalive
-        install -m755 /home/recamera/S99sheep-counter   /etc/init.d/S99sheep-counter
-        /etc/init.d/S85sscma-keepalive start || true
-        /etc/init.d/S99sheep-counter start || true
-      sudo: true
-      timeout: 90
-
-files:
-  - url: ../assets/recamera/sheep_counter
-    remote_path: /home/recamera/sheep_counter
-    sudo: false
-  - url: ../assets/recamera/sscma-keepalive.sh
-    remote_path: /home/recamera/sscma-keepalive.sh
-    sudo: false
-  - url: ../assets/recamera/S85sscma-keepalive
-    remote_path: /home/recamera/S85sscma-keepalive
-    sudo: false
-  - url: ../assets/recamera/S99sheep-counter
-    remote_path: /home/recamera/S99sheep-counter
-    sudo: false
+    disable:
+      - node-red
+      - sscma-node
+      - sscma-supervisor
 
 user_inputs:
   - id: host

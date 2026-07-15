@@ -47,8 +47,6 @@ views:
                 topic: "sheep/ha/reset_counts/set"
                 payload: "RESET_COUNTS"
 
-      - type: custom:sheep-line-card
-
       - type: entities
         title: "Last Crossing"
         entities:

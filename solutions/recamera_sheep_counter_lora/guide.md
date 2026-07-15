@@ -20,7 +20,7 @@ Count sheep at the gate and see real-time totals on your phone and in a Home Ass
 
 ## Step 1: Deploy Sheep Counter to reCamera {#deploy_recamera type=recamera_cpp required=true config=devices/recamera.yaml}
 
-Deploy the pre-compiled YOLO sheep counter binary and boot scripts to your reCamera.
+Deploy the versioned YOLO sheep counter package and its managed boot services to your reCamera.
 
 ### Wiring
 
@@ -35,14 +35,14 @@ Deploy the pre-compiled YOLO sheep counter binary and boot scripts to your reCam
 
 The deployer will:
 - Stop the default Node-RED and SSCMA services to free the NPU
-- Upload the `sheep_counter` binary and boot scripts
-- Register them as init.d services that start on every boot
+- Download and checksum-verify the `recamera-sheep-counter-lora` package from the SenseCraft CDN
+- Install its counter and supervisor as init.d services that start on every boot
 
 After deployment, SSH into the camera and tail the log to confirm it's running:
 
 ```
 ssh recamera@192.168.42.1
-tail -f /tmp/sheep_counter.log
+tail -f /var/log/sheep_counter.log
 ```
 
 You should see detection events like `EVT,IN,1,0,1,123` appearing when sheep cross the gate line.
@@ -52,7 +52,7 @@ You should see detection events like `EVT,IN,1,0,1,123` appearing when sheep cro
 | Issue | Solution |
 |-------|---------|
 | SSH connection failed | Check cable; try password `recamera.2` if `recamera` doesn't work |
-| Binary exits immediately | Run `chmod +x /home/recamera/sheep_counter` then restart the service |
+| Counter exits immediately | Check `/var/log/sheep_counter.log`, then run `/etc/init.d/S85sscma-keepalive restart` |
 | No log output after 2 min | Ensure SSCMA inference daemon is running: `/etc/init.d/S85sscma-keepalive start` |
 | No UART events reaching XIAO | Confirm XIAO GND is shared with reCamera; check wiring on `/dev/ttyS3` |
 
@@ -94,7 +94,7 @@ Once configured, trigger a test crossing by briefly pulling GPIO 490 HIGH. You s
 
 Deploy the two Python bridge services (`meshtastic_mqtt_bridge` and `ha_bridge`) to your local gateway computer via an automated install script. These services listen for LoRa messages and publish sheep counts to Home Assistant via MQTT.
 
-Before you start, ensure Home Assistant is already installed and running on your LAN, and create a **Long-Lived Access Token** in HA: Profile → Long-Lived Access Tokens → Create. You will enter the gateway IP, SSH credentials, Home Assistant IP/token, and MQTT broker IP in the deploy form.
+Before you start, ensure Home Assistant is running on your LAN and its MQTT integration is connected to the same broker with discovery enabled. You will enter the gateway SSH connection, MQTT broker IP, and Meshtastic receiver serial port in the deploy form.
 
 ### Wiring
 
@@ -120,7 +120,7 @@ Import the `ha_dashboard.yaml` file into Home Assistant:
 | Issue | Solution |
 |-------|---------|
 | meshtastic-bridge not starting | Confirm the Meshtastic USB radio is plugged into the gateway; check `journalctl -u meshtastic-bridge` |
-| ha-bridge fails to connect | Double-check the HA token; confirm port 8123 is reachable from the gateway |
+| ha-bridge fails to connect | Confirm the MQTT broker IP is reachable on port 1883 and accepts the gateway connection |
 | No MQTT messages | Verify the MQTT broker IP and that the broker accepts unauthenticated connections on port 1883 |
 | Services stop on reboot | Run `systemctl enable meshtastic-bridge ha-bridge` to re-enable |
 
@@ -134,14 +134,14 @@ The full system is now running. Click below to open the Home Assistant sheep cou
 
 Your sheep counter is live! On the dashboard you will see:
 
-- **IN / OUT / INSIDE** — real-time counters, reset at midnight
+- **IN / OUT / INSIDE** — real-time counters since the last dashboard reset
 - **Last event time** — timestamp of the most recent gate crossing
 - **Daily history** — 24-hour trend graph
 
 #### Quick Verification
 
 1. Wave your hand in front of the camera (or walk past the gate line) to simulate a crossing
-2. Watch the `EVT,IN,...` line appear in `/tmp/sheep_counter.log` on the reCamera
+2. Watch the `EVT,IN,...` line appear in `/var/log/sheep_counter.log` on the reCamera
 3. Within ~30 s, the IN counter should increment on the HA dashboard
 
 #### Tips
@@ -159,6 +159,6 @@ Your sheep counter is live! On the dashboard you will see:
 
 | Issue | Solution |
 |-------|---------|
-| Dashboard page shows no data | Confirm ha-bridge is running and the MQTT sensor entities were created by HA |
+| Dashboard page shows no data | Confirm ha-bridge is running, MQTT discovery is enabled in HA, and the `sensor.sheep_*` entities exist |
 | Counts not updating | Trigger a manual crossing; check MQTT traffic with `mosquitto_sub -t sheep/# -v` |
 | HA entities show unavailable | Re-import the `ha_dashboard.yaml` and restart the ha-bridge service |

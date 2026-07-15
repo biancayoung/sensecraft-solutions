@@ -12,6 +12,7 @@ MQTT topics that Home Assistant MQTT sensors can subscribe to:
 """
 
 import json
+import os
 import re
 import signal
 import sys
@@ -19,8 +20,8 @@ import time
 
 import paho.mqtt.client as mqtt
 
-MQTT_HOST = "127.0.0.1"
-MQTT_PORT = 1883
+MQTT_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
+MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 INPUT_TOPIC = "sheep/meshtastic"
 HA_TOPIC_IN = "sheep/ha/in"
 HA_TOPIC_OUT = "sheep/ha/out"
@@ -32,6 +33,14 @@ HA_TOPIC_RESET = "sheep/ha/reset_counts/set"
 MESHTASTIC_SEND_TOPIC = "sheep/meshtastic/send"
 
 running = True
+
+DISCOVERY_PREFIX = "homeassistant/sensor/sheep_counter"
+DISCOVERY_DEVICE = {
+    "identifiers": ["sheep_counter_lora"],
+    "name": "Sheep Counter",
+    "manufacturer": "Seeed Studio",
+    "model": "reCamera LoRa Sheep Counter",
+}
 
 # Soft-reset offset: allows the dashboard to show counts relative to the last
 # reset, even if the camera's internal counters were not cleared (e.g. the
@@ -81,11 +90,51 @@ def parse_line_ok(text):
         "in_sign": int(m.group(5)),
     }
 
+def publish_discovery(client):
+    """Create the MQTT sensor entities consumed by the bundled dashboard."""
+    sensors = {
+        "in": {
+            "name": "Sheep IN",
+            "unique_id": "sheep_in",
+            "state_topic": HA_TOPIC_IN,
+            "icon": "mdi:door-open",
+        },
+        "out": {
+            "name": "Sheep OUT",
+            "unique_id": "sheep_out",
+            "state_topic": HA_TOPIC_OUT,
+            "icon": "mdi:door-closed",
+        },
+        "inside": {
+            "name": "Sheep Inside",
+            "unique_id": "sheep_inside",
+            "state_topic": HA_TOPIC_INSIDE,
+            "icon": "mdi:sheep",
+        },
+        "last_event": {
+            "name": "Sheep Last Event",
+            "unique_id": "sheep_last_event",
+            "state_topic": HA_TOPIC_EVENT,
+            "value_template": "{{ value_json.direction | default('waiting') }}",
+            "json_attributes_topic": HA_TOPIC_EVENT,
+            "icon": "mdi:timeline-clock",
+        },
+    }
+    for object_id, config in sensors.items():
+        config["device"] = DISCOVERY_DEVICE
+        client.publish(
+            f"{DISCOVERY_PREFIX}/{object_id}/config",
+            json.dumps(config),
+            retain=True,
+        )
+    log("[ha-bridge] Home Assistant MQTT discovery published")
+
 def on_connect(client, userdata, flags, reason_code, properties):
     log(f"[ha-bridge] connected to MQTT (rc={reason_code})")
     client.subscribe(INPUT_TOPIC)
     client.subscribe(HA_TOPIC_SET_LINE)
     client.subscribe(HA_TOPIC_RESET)
+    publish_discovery(client)
 
 def on_message(client, userdata, msg):
     global reset_pending, reset_offset

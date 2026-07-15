@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bridge Meshtastic packets from USB-connected XIAO to local MQTT broker."""
 import json
+import os
 import sys
 import time
 
@@ -8,9 +9,9 @@ import paho.mqtt.client as mqtt
 from pubsub import pub
 from meshtastic.serial_interface import SerialInterface
 
-SERIAL_PORT = "/dev/ttyACM0"
-MQTT_HOST = "127.0.0.1"
-MQTT_PORT = 1883
+SERIAL_PORT = os.environ.get("SERIAL_PORT", "/dev/ttyACM0")
+MQTT_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
+MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_TOPIC = "sheep/meshtastic"
 MQTT_SEND_TOPIC = "sheep/meshtastic/send"
 
@@ -81,4 +82,3 @@ finally:
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
     interface.close()
-

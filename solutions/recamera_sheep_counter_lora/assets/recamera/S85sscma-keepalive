@@ -1,14 +1,14 @@
 #!/bin/sh
 # Boot init for the self-healing inference supervisor (replaces the stock S91sscma-node, which
 # doesn't respawn the daemon). Runs sscma-keepalive.sh detached via start-stop-daemon so PID 1
-# owns it. Install as /etc/init.d/S85sscma-keepalive (and disable S91sscma-node).
+# owns it. Installed as /etc/init.d/S85sscma-keepalive (and disables S91sscma-node).
 NAME=sscma-keepalive
 PIDFILE=/var/run/$NAME.pid
 
 case "$1" in
   start)
     printf "Starting %s: " "$NAME"
-    start-stop-daemon -S -b -m -p "$PIDFILE" -x /bin/sh -- /home/recamera/sscma-keepalive.sh
+    start-stop-daemon -S -b -m -p "$PIDFILE" -x /bin/sh -- /usr/libexec/recamera-sheep-counter-lora/sscma-keepalive.sh
     echo "OK" ;;
   stop)
     printf "Stopping %s: " "$NAME"
